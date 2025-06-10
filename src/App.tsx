@@ -9,6 +9,8 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Header } from "@/components/layout/Header";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { DesignerDashboard } from "@/components/designer/DesignerDashboard";
+import { ClientLogin } from "@/components/auth/ClientLogin";
+import { DesignerLogin } from "@/components/auth/DesignerLogin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -22,23 +24,30 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-background">
-            <Header />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/client-login" element={<ClientLogin />} />
+              <Route path="/designer-login" element={<DesignerLogin />} />
               <Route 
                 path="/client" 
                 element={
-                  <AuthGuard requiredRole="client">
-                    <ClientDashboard />
-                  </AuthGuard>
+                  <>
+                    <Header />
+                    <AuthGuard requiredRole="client">
+                      <ClientDashboard />
+                    </AuthGuard>
+                  </>
                 } 
               />
               <Route 
                 path="/designer" 
                 element={
-                  <AuthGuard requiredRole="designer">
-                    <DesignerDashboard />
-                  </AuthGuard>
+                  <>
+                    <Header />
+                    <AuthGuard requiredRole="designer">
+                      <DesignerDashboard />
+                    </AuthGuard>
+                  </>
                 } 
               />
               <Route path="*" element={<NotFound />} />

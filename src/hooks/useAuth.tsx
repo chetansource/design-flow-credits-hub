@@ -5,7 +5,7 @@ import { User } from '@/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInAsClient: () => Promise<void>;
   signInAsDesigner: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -24,24 +24,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Mock authentication for demo purposes
-  // In production, integrate with Firebase Auth
-  const signInWithGoogle = async () => {
-    console.log('Signing in with Google...');
-    // Mock user data for demo
-    const mockUser: User = {
-      uid: 'demo-user-1',
+  const signInAsClient = async () => {
+    console.log('Signing in as Client...');
+    const mockClient: User = {
+      uid: 'demo-client-1',
       email: 'client@example.com',
       displayName: 'Demo Client',
       role: 'client'
     };
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
+    setUser(mockClient);
+    localStorage.setItem('user', JSON.stringify(mockClient));
   };
 
   const signInAsDesigner = async () => {
     console.log('Signing in as Designer...');
-    // Mock designer user data for demo
     const mockDesigner: User = {
       uid: 'demo-designer-1',
       email: 'designer@example.com',
@@ -59,16 +55,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check for stored user data
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInAsDesigner, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInAsClient, signInAsDesigner, signOut }}>
       {children}
     </AuthContext.Provider>
   );

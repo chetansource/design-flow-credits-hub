@@ -11,7 +11,6 @@ const Index = () => {
 
   useEffect(() => {
     if (user) {
-      // Redirect based on user role
       if (user.role === 'client') {
         navigate('/client');
       } else if (user.role === 'designer') {
@@ -97,12 +96,17 @@ const Index = () => {
           </div>
 
           <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Ready to get started? Sign in with your Google account.
+            <p className="text-muted-foreground mb-6">
+              Choose your portal to get started
             </p>
-            <Button size="lg" className="px-8">
-              Get Started
-            </Button>
+            <div className="flex justify-center space-x-4">
+              <Button size="lg" className="px-8" onClick={() => navigate('/client-login')}>
+                Client Portal
+              </Button>
+              <Button size="lg" variant="outline" className="px-8" onClick={() => navigate('/designer-login')}>
+                Designer Portal
+              </Button>
+            </div>
           </div>
         </div>
       </div>
