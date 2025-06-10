@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInAsDesigner: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -38,6 +39,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('user', JSON.stringify(mockUser));
   };
 
+  const signInAsDesigner = async () => {
+    console.log('Signing in as Designer...');
+    // Mock designer user data for demo
+    const mockDesigner: User = {
+      uid: 'demo-designer-1',
+      email: 'designer@example.com',
+      displayName: 'Demo Designer',
+      role: 'designer'
+    };
+    setUser(mockDesigner);
+    localStorage.setItem('user', JSON.stringify(mockDesigner));
+  };
+
   const signOut = async () => {
     console.log('Signing out...');
     setUser(null);
@@ -54,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInAsDesigner, signOut }}>
       {children}
     </AuthContext.Provider>
   );

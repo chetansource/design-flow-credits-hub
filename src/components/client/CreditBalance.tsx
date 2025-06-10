@@ -5,11 +5,13 @@ import { Badge } from '@/components/ui/badge';
 
 export const CreditBalance = () => {
   // Mock data - in production, fetch from Firebase
-  const currentCredits = 95;
+  // Each client starts with 110 credits per month
   const monthlyCredits = 110;
-  const carryoverCredits = 15;
-  const usedCredits = monthlyCredits + carryoverCredits - currentCredits;
-  const usagePercentage = (usedCredits / (monthlyCredits + carryoverCredits)) * 100;
+  const carryoverCredits = 15; // Example: carried over from previous month
+  const totalAvailableCredits = monthlyCredits + carryoverCredits; // 125 total
+  const usedCredits = 30; // Example: used this month
+  const currentCredits = totalAvailableCredits - usedCredits; // 95 remaining
+  const usagePercentage = (usedCredits / totalAvailableCredits) * 100;
 
   return (
     <Card className="col-span-full md:col-span-2 lg:col-span-1">
@@ -39,6 +41,10 @@ export const CreditBalance = () => {
           <div className="flex justify-between">
             <span>Used this month:</span>
             <span>{usedCredits}</span>
+          </div>
+          <div className="flex justify-between font-medium">
+            <span>Total available:</span>
+            <span>{totalAvailableCredits}</span>
           </div>
         </div>
       </CardContent>

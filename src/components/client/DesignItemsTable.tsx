@@ -19,9 +19,9 @@ export const DesignItemsTable = () => {
           {designItems.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="font-medium">{item.name}</TableCell>
-              <TableCell>{item.size}</TableCell>
+              <TableCell>{item.sizes.join(', ')}</TableCell>
               <TableCell>
-                <Badge variant="secondary">{item.credits} credits</Badge>
+                <Badge variant="secondary">{item.creditsPerCreative} credits</Badge>
               </TableCell>
               <TableCell className="capitalize">{item.category}</TableCell>
             </TableRow>

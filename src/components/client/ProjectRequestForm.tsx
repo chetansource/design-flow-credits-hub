@@ -15,6 +15,7 @@ interface ProjectRequestFormProps {
 
 export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
   const [selectedItem, setSelectedItem] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
   const [description, setDescription] = useState('');
   const [driveLink, setDriveLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +41,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
         description: "Project request submitted successfully"
       });
       setSelectedItem('');
+      setSelectedSize('');
       setDescription('');
       setDriveLink('');
       setIsSubmitting(false);
@@ -60,7 +62,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
           <SelectContent>
             {designItems.map((item) => (
               <SelectItem key={item.id} value={item.id}>
-                {item.name} - {item.credits} credits
+                {item.name} - {item.creditsPerCreative} credits
               </SelectItem>
             ))}
           </SelectContent>
@@ -68,15 +70,35 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
       </div>
 
       {selectedDesignItem && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">
-              <p><strong>Size:</strong> {selectedDesignItem.size}</p>
-              <p><strong>Credits:</strong> {selectedDesignItem.credits}</p>
-              <p><strong>Category:</strong> {selectedDesignItem.category}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="size">Size/Duration</Label>
+            <Select value={selectedSize} onValueChange={setSelectedSize}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select size/duration" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedDesignItem.sizes.map((size) => (
+                  <SelectItem key={size} value={size}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-sm text-muted-foreground">
+                <p><strong>Credits:</strong> {selectedDesignItem.creditsPerCreative}</p>
+                <p><strong>Category:</strong> {selectedDesignItem.category}</p>
+                {selectedDesignItem.description && (
+                  <p><strong>Description:</strong> {selectedDesignItem.description}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <div className="space-y-2">

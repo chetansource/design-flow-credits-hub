@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const LoginForm = () => {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInAsDesigner } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
@@ -21,11 +21,19 @@ export const LoginForm = () => {
             className="w-full"
             size="lg"
           >
-            Sign in with Google
+            Sign in as Client
+          </Button>
+          <Button
+            onClick={signInAsDesigner}
+            className="w-full"
+            size="lg"
+            variant="outline"
+          >
+            Sign in as Designer
           </Button>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Demo: Click above to sign in as a client
+              Demo: Click above to sign in as either role
             </p>
           </div>
         </CardContent>
