@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,23 +12,25 @@ import { ClientLogin } from "@/components/auth/ClientLogin";
 import { DesignerLogin } from "@/components/auth/DesignerLogin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+// import { SeedPage } from "./pages/SeedPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
           <div className="min-h-screen bg-background">
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/client-login" element={<ClientLogin />} />
               <Route path="/designer-login" element={<DesignerLogin />} />
-              <Route 
-                path="/client" 
+              {/* <Route path="/seed" element={<SeedPage />} /> */}
+              <Route
+                path="/client"
                 element={
                   <>
                     <Header />
@@ -37,10 +38,10 @@ const App = () => (
                       <ClientDashboard />
                     </AuthGuard>
                   </>
-                } 
+                }
               />
-              <Route 
-                path="/designer" 
+              <Route
+                path="/designer"
                 element={
                   <>
                     <Header />
@@ -48,13 +49,13 @@ const App = () => (
                       <DesignerDashboard />
                     </AuthGuard>
                   </>
-                } 
+                }
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

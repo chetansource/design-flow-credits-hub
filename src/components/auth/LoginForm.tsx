@@ -1,43 +1,39 @@
+import React from "react";
+import { Button } from "../ui/button";
+import { useAuth } from "../../hooks/useAuth";
 
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+interface LoginFormProps {
+  onLogin: (role: "client" | "designer") => void;
+  role: "client" | "designer";
+}
 
-export const LoginForm = () => {
-  const { signInWithGoogle, signInAsDesigner } = useAuth();
+export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, role }) => {
+  const { user, signInAsClient, signInAsDesigner, signOut } = useAuth();
+
+  const handleLogin = async () => {
+    if (user) {
+      // If already logged in, sign out first
+      await signOut();
+    }
+    if (role === "client") {
+      await signInAsClient();
+    } else {
+      await signInAsDesigner();
+    }
+    onLogin(role); // Proceed to dashboard after login
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Design Credits Hub</CardTitle>
-          <CardDescription>
-            Sign in to access your project management dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={signInWithGoogle}
-            className="w-full"
-            size="lg"
-          >
-            Sign in as Client
-          </Button>
-          <Button
-            onClick={signInAsDesigner}
-            className="w-full"
-            size="lg"
-            variant="outline"
-          >
-            Sign in as Designer
-          </Button>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Demo: Click above to sign in as either role
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {user ? (
+        <Button onClick={signOut} variant="destructive">
+          Sign Out
+        </Button>
+      ) : (
+        <Button onClick={handleLogin}>
+          Sign in with Google as {role.charAt(0).toUpperCase() + role.slice(1)}
+        </Button>
+      )}
     </div>
   );
 };

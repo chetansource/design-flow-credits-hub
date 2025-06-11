@@ -1,55 +1,99 @@
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { designItems } from '@/data/designItems';
-import { useToast } from '@/hooks/use-toast';
+'use client'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { designItems } from "@/data/designItems";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/lib/firebase";
+import {
+  doc,
+  addDoc,
+  updateDoc,
+  collection,
+  serverTimestamp,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
 interface ProjectRequestFormProps {
   onSuccess: () => void;
 }
 
 export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
-  const [selectedItem, setSelectedItem] = useState('');
-  const [selectedSize, setSelectedSize] = useState('');
-  const [description, setDescription] = useState('');
-  const [driveLink, setDriveLink] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [selectedItem, setSelectedItem] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [description, setDescription] = useState("");
+  const [driveLink, setDriveLink] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedItem) {
-      toast({
-        title: "Error",
-        description: "Please select a design item",
-        variant: "destructive"
-      });
+    if (!user) return;
+
+    const design = designItems.find((item) => item.id === selectedItem);
+    if (!design || !selectedSize) {
+      toast({ title: "Invalid submission", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Success!",
-        description: "Project request submitted successfully"
-      });
-      setSelectedItem('');
-      setSelectedSize('');
-      setDescription('');
-      setDriveLink('');
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
+    const currentCredits = userData?.credits || 0;
+
+    if (currentCredits < design.creditsPerCreative) {
+      toast({ title: "Insufficient credits", variant: "destructive" });
       setIsSubmitting(false);
-      onSuccess();
-    }, 1000);
+      return;
+    }
+
+    const newCredits = currentCredits - design.creditsPerCreative;
+
+    // 1. Add new project
+    await addDoc(collection(db, "users", user.uid, "projects"), {
+      name: design.name,
+      size: selectedSize,
+      description,
+      driveLink,
+      credits: design.creditsPerCreative,
+      submittedDate: serverTimestamp(),
+      status: "pending",
+    });
+
+    // 2. Update credits
+    await updateDoc(userRef, { credits: newCredits });
+
+    // 3. Log credit usage
+    await addDoc(collection(db, "users", user.uid, "creditHistory"), {
+      type: "used",
+      amount: -design.creditsPerCreative,
+      description: `Requested ${design.name}`,
+      date: serverTimestamp(),
+      balance: newCredits,
+    });
+
+    // Cleanup
+    toast({ title: "Project submitted!" });
+    setSelectedItem("");
+    setSelectedSize("");
+    setDescription("");
+    setDriveLink("");
+    setIsSubmitting(false);
+    onSuccess();
   };
 
-  const selectedDesignItem = designItems.find(item => item.id === selectedItem);
+  const selectedDesignItem = designItems.find(
+    (item) => item.id === selectedItem
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -90,10 +134,18 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
           <Card>
             <CardContent className="pt-6">
               <div className="text-sm text-muted-foreground">
-                <p><strong>Credits:</strong> {selectedDesignItem.creditsPerCreative}</p>
-                <p><strong>Category:</strong> {selectedDesignItem.category}</p>
+                <p>
+                  <strong>Credits:</strong>{" "}
+                  {selectedDesignItem.creditsPerCreative}
+                </p>
+                <p>
+                  <strong>Category:</strong> {selectedDesignItem.category}
+                </p>
                 {selectedDesignItem.description && (
-                  <p><strong>Description:</strong> {selectedDesignItem.description}</p>
+                  <p>
+                    <strong>Description:</strong>{" "}
+                    {selectedDesignItem.description}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -103,7 +155,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="description">Project Description</Label>
-        <Textarea 
+        <Textarea
           id="description"
           placeholder="Describe your project requirements..."
           value={description}
@@ -114,7 +166,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="drive-link">Google Drive Link (Optional)</Label>
-        <Input 
+        <Input
           id="drive-link"
           type="url"
           placeholder="https://drive.google.com/..."
@@ -124,7 +176,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? 'Submitting...' : 'Submit Project Request'}
+        {isSubmitting ? "Submitting..." : "Submit Project Request"}
       </Button>
     </form>
   );

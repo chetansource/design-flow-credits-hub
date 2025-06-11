@@ -1,11 +1,10 @@
-
-import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  requiredRole?: 'client' | 'designer';
+  requiredRole?: "client" | "designer";
 }
 
 export const AuthGuard = ({ children, requiredRole }: AuthGuardProps) => {
@@ -15,12 +14,12 @@ export const AuthGuard = ({ children, requiredRole }: AuthGuardProps) => {
   useEffect(() => {
     if (!loading && !user) {
       // Redirect to appropriate login based on required role
-      if (requiredRole === 'client') {
-        navigate('/client-login');
-      } else if (requiredRole === 'designer') {
-        navigate('/designer-login');
+      if (requiredRole === "client") {
+        navigate("/client-login");
+      } else if (requiredRole === "designer") {
+        navigate("/designer-login");
       } else {
-        navigate('/');
+        navigate("/");
       }
     }
   }, [user, loading, requiredRole, navigate]);
@@ -45,8 +44,8 @@ export const AuthGuard = ({ children, requiredRole }: AuthGuardProps) => {
           <p className="text-muted-foreground mb-4">
             You don't have permission to access this page.
           </p>
-          <button 
-            onClick={() => navigate('/')}
+          <button
+            onClick={() => navigate("/")}
             className="text-primary hover:underline"
           >
             Go to Home

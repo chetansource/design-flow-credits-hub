@@ -1,44 +1,58 @@
+import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-
-// Mock data for demonstration
-const mockCreditHistory = [
-  {
-    id: '1',
-    type: 'used',
-    amount: -2,
-    description: 'Business Card Design',
-    date: '2024-01-15',
-    balance: 108
-  },
-  {
-    id: '2',
-    type: 'used',
-    amount: -5,
-    description: 'Brochure Design',
-    date: '2024-01-20',
-    balance: 103
-  },
-  {
-    id: '3',
-    type: 'added',
-    amount: 110,
-    description: 'Monthly credit allocation',
-    date: '2024-02-01',
-    balance: 213
-  },
-  {
-    id: '4',
-    type: 'used',
-    amount: -3,
-    description: 'Flyer Design',
-    date: '2024-02-05',
-    balance: 210
-  }
-];
+interface CreditTransaction {
+  id: string;
+  type: "added" | "used";
+  amount: number;
+  description: string;
+  date: string;
+  balance: number;
+}
 
 export const CreditHistory = () => {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchCreditHistory = async () => {
+      const q = query(
+        collection(db, "users", user.uid, "creditHistory"),
+        orderBy("date", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        date: new Date(doc.data().date.seconds * 1000).toLocaleDateString(),
+      })) as CreditTransaction[];
+      setTransactions(data);
+      setLoading(false);
+    };
+
+    fetchCreditHistory();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="text-muted-foreground">Loading credit history...</div>
+    );
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -52,22 +66,29 @@ export const CreditHistory = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockCreditHistory.map((transaction) => (
-            <TableRow key={transaction.id}>
-              <TableCell>{transaction.date}</TableCell>
+          {transactions.map((tx) => (
+            <TableRow key={tx.id}>
+              <TableCell>{tx.date}</TableCell>
               <TableCell>
-                <Badge 
-                  variant={transaction.type === 'added' ? 'default' : 'secondary'}
-                  className={transaction.type === 'added' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                <Badge
+                  variant={tx.type === "added" ? "default" : "secondary"}
+                  className={
+                    tx.type === "added"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }
                 >
-                  {transaction.type === 'added' ? 'Credit Added' : 'Credit Used'}
+                  {tx.type === "added" ? "Credit Added" : "Credit Used"}
                 </Badge>
               </TableCell>
-              <TableCell className={transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}>
-                {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+              <TableCell
+                className={tx.amount > 0 ? "text-green-600" : "text-red-600"}
+              >
+                {tx.amount > 0 ? "+" : ""}
+                {tx.amount}
               </TableCell>
-              <TableCell>{transaction.description}</TableCell>
-              <TableCell className="font-medium">{transaction.balance}</TableCell>
+              <TableCell>{tx.description}</TableCell>
+              <TableCell className="font-medium">{tx.balance}</TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -1,15 +1,20 @@
-
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditBalance } from './CreditBalance';
-import { DesignItemsTable } from './DesignItemsTable';
-import { ProjectRequestForm } from './ProjectRequestForm';
-import { ProjectHistory } from './ProjectHistory';
-import { CreditHistory } from './CreditHistory';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditBalance } from "./CreditBalance";
+import { DesignItemsTable } from "./DesignItemsTable";
+import { ProjectRequestForm } from "./ProjectRequestForm";
+import { ProjectHistory } from "./ProjectHistory";
+import { CreditHistory } from "./CreditHistory";
 
 export const ClientDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -20,7 +25,11 @@ export const ClientDashboard = () => {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="new-project">New Project</TabsTrigger>
@@ -32,7 +41,6 @@ export const ClientDashboard = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <CreditBalance />
           </div>
-          
           <Card>
             <CardHeader>
               <CardTitle>Available Design Services</CardTitle>
@@ -55,7 +63,7 @@ export const ClientDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProjectRequestForm onSuccess={() => setActiveTab('projects')} />
+              <ProjectRequestForm onSuccess={() => setActiveTab("projects")} />
             </CardContent>
           </Card>
         </TabsContent>
