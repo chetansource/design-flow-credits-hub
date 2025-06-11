@@ -1,12 +1,20 @@
-'use client'
-import { useState } from "react";
+// Final enhanced ProjectRequestForm.tsx with button-triggered popup, dynamic design item list, and search functionality
+
+"use client";
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { designItems } from "@/data/designItems";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/firebase";
@@ -17,8 +25,17 @@ import {
   collection,
   serverTimestamp,
   getDoc,
-  setDoc,
+  getDocs,
 } from "firebase/firestore";
+
+interface DesignItem {
+  id: string;
+  name: string;
+  creditsPerCreative: number;
+  sizes: string[];
+  category: string;
+  description?: string;
+}
 
 interface ProjectRequestFormProps {
   onSuccess: () => void;
@@ -27,21 +44,30 @@ interface ProjectRequestFormProps {
 export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedItem, setSelectedItem] = useState("");
+  const [designItems, setDesignItems] = useState<DesignItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<DesignItem | null>(null);
   const [selectedSize, setSelectedSize] = useState("");
   const [description, setDescription] = useState("");
   const [driveLink, setDriveLink] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      const snapshot = await getDocs(collection(db, "designItems"));
+      const items = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as DesignItem[];
+      setDesignItems(items);
+    };
+    fetchItems();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    const design = designItems.find((item) => item.id === selectedItem);
-    if (!design || !selectedSize) {
-      toast({ title: "Invalid submission", variant: "destructive" });
-      return;
-    }
+    if (!user || !selectedItem || !selectedSize) return;
 
     setIsSubmitting(true);
 
@@ -50,40 +76,40 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
     const userData = userSnap.data();
     const currentCredits = userData?.credits || 0;
 
-    if (currentCredits < design.creditsPerCreative) {
+    if (currentCredits < selectedItem.creditsPerCreative) {
       toast({ title: "Insufficient credits", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
 
-    const newCredits = currentCredits - design.creditsPerCreative;
+    const newCredits = currentCredits - selectedItem.creditsPerCreative;
 
-    // 1. Add new project
     await addDoc(collection(db, "users", user.uid, "projects"), {
-      name: design.name,
+      name: selectedItem.name,
       size: selectedSize,
       description,
       driveLink,
-      credits: design.creditsPerCreative,
+      credits: selectedItem.creditsPerCreative,
       submittedDate: serverTimestamp(),
-      status: "pending",
+      status: "new",
+      clientId: user.uid,
+      clientName: user.displayName || "Anonymous",
+      clientEmail: user.email || "",
+      comments: [], // Empty comments array for designer use
     });
 
-    // 2. Update credits
     await updateDoc(userRef, { credits: newCredits });
 
-    // 3. Log credit usage
     await addDoc(collection(db, "users", user.uid, "creditHistory"), {
       type: "used",
-      amount: -design.creditsPerCreative,
-      description: `Requested ${design.name}`,
+      amount: -selectedItem.creditsPerCreative,
+      description: `Requested ${selectedItem.name}`,
       date: serverTimestamp(),
       balance: newCredits,
     });
 
-    // Cleanup
     toast({ title: "Project submitted!" });
-    setSelectedItem("");
+    setSelectedItem(null);
     setSelectedSize("");
     setDescription("");
     setDriveLink("");
@@ -91,63 +117,86 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
     onSuccess();
   };
 
-  const selectedDesignItem = designItems.find(
-    (item) => item.id === selectedItem
+  const filteredItems = designItems.filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="design-item">Design Item</Label>
-        <Select value={selectedItem} onValueChange={setSelectedItem}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a design item" />
-          </SelectTrigger>
-          <SelectContent>
-            {designItems.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name} - {item.creditsPerCreative} credits
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>Design Item</Label>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full">
+              {selectedItem
+                ? `${selectedItem.name} - ${selectedItem.creditsPerCreative} credits`
+                : "Select Design Item"}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Select a Design Item</DialogTitle>
+              <DialogDescription>
+                Search and select a service from the full design list.
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              placeholder="Search design services..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="mb-4"
+            />
+            <div className="space-y-2">
+              {filteredItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className="justify-start w-full text-left"
+                  onClick={() => {
+                    setSelectedItem(item);
+                    setDialogOpen(false);
+                  }}
+                >
+                  {item.name} - {item.creditsPerCreative} credits
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {selectedDesignItem && (
+      {selectedItem && (
         <>
           <div className="space-y-2">
             <Label htmlFor="size">Size/Duration</Label>
-            <Select value={selectedSize} onValueChange={setSelectedSize}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select size/duration" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedDesignItem.sizes.map((size) => (
-                  <SelectItem key={size} value={size}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              id="size"
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value)}
+              className="w-full border rounded p-2"
+            >
+              <option value="">Select size/duration</option>
+              {selectedItem.sizes.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
           </div>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">
+            <CardContent className="pt-6 text-sm text-muted-foreground space-y-1">
+              <p>
+                <strong>Credits:</strong> {selectedItem.creditsPerCreative}
+              </p>
+              <p>
+                <strong>Category:</strong> {selectedItem.category}
+              </p>
+              {selectedItem.description && (
                 <p>
-                  <strong>Credits:</strong>{" "}
-                  {selectedDesignItem.creditsPerCreative}
+                  <strong>Description:</strong> {selectedItem.description}
                 </p>
-                <p>
-                  <strong>Category:</strong> {selectedDesignItem.category}
-                </p>
-                {selectedDesignItem.description && (
-                  <p>
-                    <strong>Description:</strong>{" "}
-                    {selectedDesignItem.description}
-                  </p>
-                )}
-              </div>
+              )}
             </CardContent>
           </Card>
         </>
