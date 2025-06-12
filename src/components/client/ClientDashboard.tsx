@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import { DesignItemsTable } from "./DesignItemsTable";
 import { ProjectRequestForm } from "./ProjectRequestForm";
 import { ProjectHistory } from "./ProjectHistory";
 import { CreditHistory } from "./CreditHistory";
+import { useAuth } from "@/hooks/useAuth";
 
 export const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -19,7 +20,14 @@ export const ClientDashboard = () => {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Client Dashboard</h1>
+        <div className="flex space-x-3 items-center">
+          <img
+            src="/xrite-pantone-Logo.png"
+            alt="Company Logo"
+            className="h-12 w-12 object-contain rounded-md"
+          />
+          <h1 className="text-3xl font-bold mb-2">Xrite Pantone Dashboard</h1>
+        </div>
         <p className="text-muted-foreground">
           Manage your design projects and track credit usage
         </p>
@@ -63,7 +71,10 @@ export const ClientDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProjectRequestForm onSuccess={() => setActiveTab("projects")} />
+              <ProjectRequestForm
+                onSuccess={() => setActiveTab("projects")}
+                refetchCredits={() => window.location.reload()} // Simple refetch for now
+              />
             </CardContent>
           </Card>
         </TabsContent>

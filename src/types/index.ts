@@ -32,12 +32,22 @@ export interface Project {
   id: string;
   clientId: string;
   clientName: string;
+  clientEmail?: string;
+  name: string;
+  credits: number;
   title: string;
   designItem: DesignItem;
   selectedSize: string;
   description: string;
   driveLink?: string;
-  status: 'new' | 'info_required' | 'wip' | 'feedback_approval' | 'completed' | 'on_hold';
+  size?: string;
+  status:
+    | "new"
+    | "info_required"
+    | "wip"
+    | "feedback_approval"
+    | "completed"
+    | "on_hold";
   creditsUsed: number;
   createdAt: string;
   updatedAt: string;

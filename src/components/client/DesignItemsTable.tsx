@@ -37,6 +37,7 @@ export const DesignItemsTable = () => {
 
     fetchDesignItems();
   }, []);
+  
 
   if (loading) {
     return (

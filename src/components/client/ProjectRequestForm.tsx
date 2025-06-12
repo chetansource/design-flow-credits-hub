@@ -39,9 +39,10 @@ interface DesignItem {
 
 interface ProjectRequestFormProps {
   onSuccess: () => void;
+  refetchCredits: () => void;
 }
 
-export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
+export const ProjectRequestForm = ({ onSuccess, refetchCredits }: ProjectRequestFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [designItems, setDesignItems] = useState<DesignItem[]>([]);
@@ -114,6 +115,7 @@ export const ProjectRequestForm = ({ onSuccess }: ProjectRequestFormProps) => {
     setDescription("");
     setDriveLink("");
     setIsSubmitting(false);
+    refetchCredits();
     onSuccess();
   };
 
