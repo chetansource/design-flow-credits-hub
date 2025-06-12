@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, createBrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Header } from "@/components/layout/Header";
@@ -13,6 +13,7 @@ import { DesignerLogin } from "@/components/auth/DesignerLogin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 // import { SeedPage } from "./pages/SeedPage";
+
 
 const queryClient = new QueryClient();
 
