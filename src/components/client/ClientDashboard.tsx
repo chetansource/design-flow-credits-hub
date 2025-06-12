@@ -12,7 +12,6 @@ import { DesignItemsTable } from "./DesignItemsTable";
 import { ProjectRequestForm } from "./ProjectRequestForm";
 import { ProjectHistory } from "./ProjectHistory";
 import { CreditHistory } from "./CreditHistory";
-import { useAuth } from "@/hooks/useAuth";
 
 export const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");

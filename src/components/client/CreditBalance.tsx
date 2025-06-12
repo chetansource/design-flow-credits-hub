@@ -16,6 +16,7 @@ import {
   query,
   where,
   Timestamp,
+  orderBy,
 } from "firebase/firestore";
 
 export const CreditBalance = () => {
@@ -32,40 +33,58 @@ export const CreditBalance = () => {
 
     try {
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfNextMonth = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        1
-      );
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const thisMonth = now.getMonth();
 
-      // Query monthly usage from global `credit_history` collection
-      const creditHistoryRef = collection(db, "credit_history");
-      const creditQuery = query(
-        creditHistoryRef,
-        where("userId", "==", user.uid),
-        where("date", ">=", Timestamp.fromDate(startOfMonth)),
-        where("date", "<", Timestamp.fromDate(startOfNextMonth)),
+      const creditRef = collection(db, "users", user.uid, "creditHistory");
+
+      // Query used credits this month
+      const usedQuery = query(
+        creditRef,
+        where("date", ">=", Timestamp.fromDate(thisMonthStart)),
+        where("date", "<", Timestamp.fromDate(nextMonthStart)),
         where("type", "==", "used")
       );
 
-      const snapshot = await getDocs(creditQuery);
-      let totalUsed = 0;
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        totalUsed += Math.abs(data.amount); // ensure positive
+      // Query balance at end of last month
+      const prevQuery = query(
+        creditRef,
+        where("date", ">=", Timestamp.fromDate(lastMonthStart)),
+        where("date", "<", Timestamp.fromDate(thisMonthStart)),
+        orderBy("date")
+      );
+
+      const [usedSnap, prevSnap] = await Promise.all([
+        getDocs(usedQuery),
+        getDocs(prevQuery),
+      ]);
+
+      let usedThisMonth = 0;
+      usedSnap.forEach((doc) => {
+        const d = doc.data();
+        usedThisMonth += Math.abs(d.amount); // ensure positive
       });
 
-      setUsedCredits(totalUsed);
+      // Get last known balance from last month's last transaction
+      let carryover = 0;
+      if (!prevSnap.empty) {
+        const docs = prevSnap.docs;
+        const lastDoc = docs[docs.length - 1];
+        const lastData = lastDoc.data();
+        carryover = lastData.balance || 0;
+      }
 
-      // Optional: if you want carryover later, fetch from user doc
-      setCarryover(0);
+      setUsedCredits(usedThisMonth);
+      setCarryover(carryover);
     } catch (err) {
       console.error("Error fetching credit details:", err);
     }
 
     setLoading(false);
   };
+  
 
   useEffect(() => {
     fetchCreditDetails();

@@ -42,7 +42,10 @@ interface ProjectRequestFormProps {
   refetchCredits: () => void;
 }
 
-export const ProjectRequestForm = ({ onSuccess, refetchCredits }: ProjectRequestFormProps) => {
+export const ProjectRequestForm = ({
+  onSuccess,
+  refetchCredits,
+}: ProjectRequestFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [designItems, setDesignItems] = useState<DesignItem[]>([]);

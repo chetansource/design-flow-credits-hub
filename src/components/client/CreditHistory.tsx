@@ -32,7 +32,7 @@ export const CreditHistory = () => {
     const fetchCreditHistory = async () => {
       const q = query(
         collection(db, "users", user.uid, "creditHistory"),
-        orderBy("date", "desc")
+        orderBy("date")
       );
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map((doc) => ({

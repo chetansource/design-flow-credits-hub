@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { onSnapshot } from "firebase/firestore";
 
 interface Project {
   id: string;
@@ -47,13 +48,13 @@ export const ProjectHistory = () => {
   useEffect(() => {
     if (!user) return;
 
-    const fetchProjects = async () => {
-      const q = query(
-        collection(db, "users", user.uid, "projects"),
-        orderBy("submittedDate", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map((doc) => ({
+    const q = query(
+      collection(db, "users", user.uid, "projects"),
+      orderBy("submittedDate", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         submittedDate: new Date(
@@ -62,9 +63,9 @@ export const ProjectHistory = () => {
       })) as Project[];
       setProjects(data);
       setLoading(false);
-    };
+    });
 
-    fetchProjects();
+    return () => unsubscribe(); // ✅ Correct cleanup
   }, [user]);
 
   if (loading) {
