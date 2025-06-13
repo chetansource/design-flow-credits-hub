@@ -50,12 +50,13 @@ export const ProjectRequestForm = ({
   const { user } = useAuth();
   const [designItems, setDesignItems] = useState<DesignItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<DesignItem | null>(null);
-  const [selectedSize, setSelectedSize] = useState("");
   const [description, setDescription] = useState("");
   const [driveLink, setDriveLink] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [timeLine, SetTimeLine] = useState("");
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -71,7 +72,7 @@ export const ProjectRequestForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedItem || !selectedSize) return;
+    if (!user || !selectedItem) return;
 
     setIsSubmitting(true);
 
@@ -90,9 +91,10 @@ export const ProjectRequestForm = ({
 
     await addDoc(collection(db, "users", user.uid, "projects"), {
       name: selectedItem.name,
-      size: selectedSize,
       description,
       driveLink,
+      projectName,
+      timeLine,
       credits: selectedItem.creditsPerCreative,
       submittedDate: serverTimestamp(),
       status: "new",
@@ -114,10 +116,11 @@ export const ProjectRequestForm = ({
 
     toast({ title: "Project submitted!" });
     setSelectedItem(null);
-    setSelectedSize("");
     setDescription("");
     setDriveLink("");
     setIsSubmitting(false);
+    setProjectName("");
+    SetTimeLine("");
     refetchCredits();
     onSuccess();
   };
@@ -128,6 +131,16 @@ export const ProjectRequestForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="projectName">Project Name</Label>
+        <Input
+          id="projectName"
+          type="text"
+          placeholder="Enter Project Name"
+          value={projectName}
+          onChange={(e) => setProjectName(e.target.value)}
+        />
+      </div>
       <div className="space-y-2">
         <Label>Design Item</Label>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -172,7 +185,7 @@ export const ProjectRequestForm = ({
 
       {selectedItem && (
         <>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="size">Size/Duration</Label>
             <select
               id="size"
@@ -187,8 +200,22 @@ export const ProjectRequestForm = ({
                 </option>
               ))}
             </select>
+          </div> */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="timeline"
+              className="text-sm font-medium text-gray-700"
+            >
+              Project Timeline
+            </Label>
+            <Input
+              id="timeline"
+              type="date"
+              value={timeLine}
+              onChange={(e) => SetTimeLine(e.target.value)}
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 hover:border-gray-400"
+            />
           </div>
-
           <Card>
             <CardContent className="pt-6 text-sm text-muted-foreground space-y-1">
               <p>
@@ -219,11 +246,11 @@ export const ProjectRequestForm = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="drive-link">Google Drive Link (Optional)</Label>
+        <Label htmlFor="drive-link">Drive Link (Optional)</Label>
         <Input
           id="drive-link"
           type="url"
-          placeholder="https://drive.google.com/..."
+          placeholder="Paste Your drive Link Here..."
           value={driveLink}
           onChange={(e) => setDriveLink(e.target.value)}
         />

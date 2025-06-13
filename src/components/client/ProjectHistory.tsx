@@ -25,16 +25,16 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "completed":
       return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
-    case "in-progress":
+    case "wip":
       return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
-    case "feedback":
+    case "info_required":
       return (
         <Badge className="bg-yellow-100 text-yellow-800">
-          Feedback & Approval
+          Info Required
         </Badge>
       );
-    case "pending":
-      return <Badge className="bg-gray-100 text-gray-800">Pending</Badge>;
+    case "new":
+      return <Badge className="bg-gray-100 text-gray-800">New</Badge>;
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }

@@ -1,14 +1,13 @@
-
 export interface User {
   uid: string;
   email: string;
   displayName: string;
-  role: 'client' | 'designer';
+  role: "client" | "designer";
   photoURL?: string;
 }
 
 export interface Client extends User {
-  role: 'client';
+  role: "client";
   credits: number;
   monthlyCredits: number;
   carryoverCredits: number;
@@ -16,7 +15,7 @@ export interface Client extends User {
 }
 
 export interface Designer extends User {
-  role: 'designer';
+  role: "designer";
 }
 
 export interface DesignItem {
@@ -63,6 +62,7 @@ export interface Comment {
   authorName: string;
   content: string;
   timestamp: string;
+  replies?: Comment[];
 }
 
 export interface CreditTransaction {
@@ -70,7 +70,7 @@ export interface CreditTransaction {
   clientId: string;
   projectId: string;
   amount: number;
-  type: 'deduction' | 'carryover' | 'reset';
+  type: "deduction" | "carryover" | "reset";
   timestamp: string;
   description: string;
 }

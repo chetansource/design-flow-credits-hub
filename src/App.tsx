@@ -12,7 +12,7 @@ import { ClientLogin } from "@/components/auth/ClientLogin";
 import { DesignerLogin } from "@/components/auth/DesignerLogin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-// import { SeedPage } from "./pages/SeedPage";
+import { SeedPage } from "./pages/SeedPage";
 
 
 const queryClient = new QueryClient();
@@ -29,7 +29,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/client-login" element={<ClientLogin />} />
               <Route path="/designer-login" element={<DesignerLogin />} />
-              {/* <Route path="/seed" element={<SeedPage />} /> */}
+              <Route path="/seed" element={<SeedPage />} />
               <Route
                 path="/client"
                 element={

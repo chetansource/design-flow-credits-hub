@@ -12,6 +12,7 @@ import { DesignItemsTable } from "./DesignItemsTable";
 import { ProjectRequestForm } from "./ProjectRequestForm";
 import { ProjectHistory } from "./ProjectHistory";
 import { CreditHistory } from "./CreditHistory";
+import { CommentHistory } from "../commentHistory/CommentHistory";
 
 export const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -37,11 +38,12 @@ export const ClientDashboard = () => {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="new-project">New Project</TabsTrigger>
           <TabsTrigger value="projects">My Projects</TabsTrigger>
           <TabsTrigger value="credits">Credit History</TabsTrigger>
+          <TabsTrigger value="comments">Comment History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -102,6 +104,20 @@ export const ClientDashboard = () => {
             </CardHeader>
             <CardContent>
               <CreditHistory />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="comments">
+          <Card>
+            <CardHeader>
+              <CardTitle>Comment History</CardTitle>
+              <CardDescription>
+                View all comments made on your projects
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CommentHistory />
             </CardContent>
           </Card>
         </TabsContent>

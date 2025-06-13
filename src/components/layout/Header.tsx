@@ -1,7 +1,6 @@
-
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -10,16 +9,14 @@ export const Header = () => {
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold text-foreground">
-            Design Credits Hub
-          </h1>
-          {user && (
-            <span className="text-sm text-muted-foreground capitalize">
-              {user.role} Dashboard
-            </span>
-          )}
+          <img
+            src="/LD_logo.png"
+            alt="Logo"
+            className="w-[120px] object-contain rounded-md"
+          />
+          <h1 className="text-2xl font-bold text-foreground">Credit Tracker</h1>
         </div>
-        
+
         {user && (
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">

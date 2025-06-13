@@ -134,7 +134,7 @@ export const CreditBalance = () => {
           </div>
           <div className="flex justify-between font-medium">
             <span>Total available:</span>
-            <span>{totalAvailable}</span>
+            <span>{creditsRemaining}</span>
           </div>
         </div>
       </CardContent>
