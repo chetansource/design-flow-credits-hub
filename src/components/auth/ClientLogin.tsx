@@ -7,14 +7,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export const ClientLogin = () => {
   const { user, loading, signInAsClient, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  const [email, setEmail] = useState("");
+  const [isVerifiedClient, setIsVerifiedClient] = useState(false);
+  const [error, setError] = useState("");
+
+  // List of allowed client emails
+  const allowedClients = [
+    "heygrey05@gmail.com",
+    // Add more client emails as needed
+  ];
+
   useEffect(() => {
     if (!loading && user) {
       if (user.role === "client") {
@@ -25,10 +35,19 @@ export const ClientLogin = () => {
     }
   }, [user, loading, navigate]);
 
+  const handleVerifyEmail = () => {
+    if (allowedClients.includes(email.trim().toLowerCase())) {
+      setIsVerifiedClient(true);
+      setError("");
+    } else {
+      setError("Unauthorized client email. Please contact support.");
+      setIsVerifiedClient(false);
+    }
+  };
+
   const handleClientLogin = async () => {
     if (user) {
-      // If already logged in, sign out first
-      await signOut();
+      await signOut(); // Sign out if already logged in
     }
     await signInAsClient();
   };
@@ -51,9 +70,41 @@ export const ClientLogin = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={handleClientLogin} className="w-full" size="lg">
-            Sign in with Google as Client
-          </Button>
+          {!isVerifiedClient ? (
+            <>
+              <Input
+                type="email"
+                placeholder="Enter your client email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button onClick={handleVerifyEmail} className="w-full" size="lg">
+                Verify Email
+              </Button>
+              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={handleClientLogin}
+                className="w-full"
+                size="lg"
+              >
+                Sign in with Google as Client
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsVerifiedClient(false);
+                  setEmail("");
+                }}
+                className="w-full text-sm text-muted-foreground"
+              >
+                Change Email
+              </Button>
+            </>
+          )}
+
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-2">
               Are you a designer?

@@ -62,7 +62,6 @@ export const CreditHistory = () => {
             <TableHead>Type</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Balance</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -88,7 +87,6 @@ export const CreditHistory = () => {
                 {tx.amount}
               </TableCell>
               <TableCell>{tx.description}</TableCell>
-              <TableCell className="font-medium">{tx.balance}</TableCell>
             </TableRow>
           ))}
         </TableBody>

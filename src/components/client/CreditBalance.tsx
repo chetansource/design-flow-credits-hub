@@ -22,6 +22,7 @@ import {
 export const CreditBalance = () => {
   const { user } = useAuth();
   const [carryover, setCarryover] = useState<number>(0); // optional if using
+  const [approvedCredits, setApprovedCredits] = useState<number>(0);
   const [usedCredits, setUsedCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -36,19 +37,15 @@ export const CreditBalance = () => {
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const thisMonth = now.getMonth();
 
+      // Query used credits from creditHistory
       const creditRef = collection(db, "users", user.uid, "creditHistory");
-
-      // Query used credits this month
       const usedQuery = query(
         creditRef,
         where("date", ">=", Timestamp.fromDate(thisMonthStart)),
         where("date", "<", Timestamp.fromDate(nextMonthStart)),
         where("type", "==", "used")
       );
-
-      // Query balance at end of last month
       const prevQuery = query(
         creditRef,
         where("date", ">=", Timestamp.fromDate(lastMonthStart)),
@@ -64,10 +61,9 @@ export const CreditBalance = () => {
       let usedThisMonth = 0;
       usedSnap.forEach((doc) => {
         const d = doc.data();
-        usedThisMonth += Math.abs(d.amount); // ensure positive
+        usedThisMonth += Math.abs(d.amount);
       });
 
-      // Get last known balance from last month's last transaction
       let carryover = 0;
       if (!prevSnap.empty) {
         const docs = prevSnap.docs;
@@ -76,15 +72,31 @@ export const CreditBalance = () => {
         carryover = lastData.balance || 0;
       }
 
+      // ✅ Fetch approved extra credits from creditsbuyed
+      const creditsBuyedRef = collection(db, "users", user.uid, "creditsbuyed");
+      console.log("Fetching approved credits from:", creditsBuyedRef);
+      const approvedQuery = query(
+        creditsBuyedRef,
+        where("status", "==", "approved")
+      );
+      const approvedSnap = await getDocs(approvedQuery);
+
+      let extraApprovedCredits = 0;
+      approvedSnap.forEach((doc) => {
+        const data = doc.data();
+        extraApprovedCredits += Number(data.buyedcredits || 0);
+      });
+
+      // Save states
       setUsedCredits(usedThisMonth);
-      setCarryover(carryover);
+      setApprovedCredits(extraApprovedCredits);
+      console.log(extraApprovedCredits);
     } catch (err) {
       console.error("Error fetching credit details:", err);
     }
 
     setLoading(false);
   };
-  
 
   useEffect(() => {
     fetchCreditDetails();
@@ -98,7 +110,7 @@ export const CreditBalance = () => {
     );
   }
 
-  const totalAvailable = monthlyCredits + carryover;
+  const totalAvailable = monthlyCredits + carryover + approvedCredits;
   const creditsRemaining = totalAvailable - usedCredits;
   const usagePercentage =
     totalAvailable === 0 ? 0 : (usedCredits / totalAvailable) * 100;
@@ -131,6 +143,10 @@ export const CreditBalance = () => {
           <div className="flex justify-between">
             <span>Used this month:</span>
             <span>{usedCredits}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Credits bought:</span>
+            <span>{approvedCredits}</span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Total available:</span>

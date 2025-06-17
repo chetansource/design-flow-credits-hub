@@ -13,6 +13,8 @@ import { DesignerLogin } from "@/components/auth/DesignerLogin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SeedPage } from "./pages/SeedPage";
+import { RequestedCredits } from "./components/designer/RequestedCredits";
+import { DesignerProjectsChat } from "./components/designer/DesignerMessages";
 
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
               <Route path="/client-login" element={<ClientLogin />} />
               <Route path="/designer-login" element={<DesignerLogin />} />
               <Route path="/seed" element={<SeedPage />} />
+              <Route path="/approve-credits" element={<RequestedCredits />} />
+              <Route path="/messages" element={<DesignerProjectsChat />} />
               <Route
                 path="/client"
                 element={

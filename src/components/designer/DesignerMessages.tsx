@@ -8,19 +8,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/firebase";
 import {
+  collectionGroup,
+  getDocs,
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   addDoc,
   serverTimestamp,
-  where,
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Backpack,
+  Move3D,
+  MoveDiagonal,
+  MoveDownLeft,
+  SkipBack,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Project {
   id: string;
@@ -28,6 +37,8 @@ interface Project {
   status: string;
   submittedDate: string;
   credits: number;
+  clientId: string;
+  submittedTimestamp: number; // Add this for sorting
 }
 
 interface Message {
@@ -42,103 +53,84 @@ interface Message {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case "completed":
-      return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          Completed
-        </Badge>
-      );
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
     case "wip":
-      return (
-        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-          In Progress
-        </Badge>
-      );
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">In Progress</Badge>;
     case "info_required":
       return (
-        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-          Info Required
-        </Badge>
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Info Required</Badge>
       );
     case "new":
-      return (
-        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-          New
-        </Badge>
-      );
+      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">New</Badge>;
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }
 };
 
-export const ProjectHistory = () => {
-  const { user } = useAuth();
+export const DesignerProjectsChat = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [newMessages, setNewMessages] = useState<Record<string, string>>({});
-  const [messageListeners, setMessageListeners] = useState<
-    Record<string, () => void>
-  >({});
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) return;
+    const fetchProjects = async () => {
+      try {
+        const snapshot = await getDocs(collectionGroup(db, "projects"));
+        const fetchedProjects = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const submittedTimestamp = data.submittedDate?.seconds
+            ? data.submittedDate.seconds * 1000
+            : 0;
 
-    const q = query(
-      collection(db, "users", user.uid, "projects"),
-      orderBy("submittedDate", "desc")
-    );
+          return {
+            id: doc.id,
+            name: data.name || "Unnamed Project",
+            status: data.status || "new",
+            submittedDate: submittedTimestamp
+              ? new Date(submittedTimestamp).toLocaleDateString()
+              : "Unknown date",
+            credits: data.credits || 0,
+            clientId: doc.ref.parent.parent?.id || "unknown",
+            submittedTimestamp, // Store for sorting
+          };
+        });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        submittedDate: new Date(
-          doc.data().submittedDate.seconds * 1000
-        ).toLocaleDateString(),
-      })) as Project[];
-      setProjects(data);
-      setLoading(false);
-    });
+        // Sort projects by submitted date (most recent first)
+        const sortedProjects = fetchedProjects.sort((a, b) => {
+          return b.submittedTimestamp - a.submittedTimestamp;
+        });
 
-    return () => {
-      unsubscribe();
-      // Clean up message listeners
-      Object.values(messageListeners).forEach((unsub) => unsub());
+        setProjects(sortedProjects);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        setLoading(false);
+      }
     };
-  }, [user]);
+    fetchProjects();
+  }, []);
 
   const toggleExpand = async (projectId: string) => {
     if (expanded === projectId) {
       setExpanded(null);
-      // Clean up the message listener for this project
-      if (messageListeners[projectId]) {
-        messageListeners[projectId]();
-        const newListeners = { ...messageListeners };
-        delete newListeners[projectId];
-        setMessageListeners(newListeners);
-      }
     } else {
       setExpanded(projectId);
-      await fetchMessages(projectId);
+      fetchMessages(projectId);
     }
   };
 
-  const fetchMessages = async (projectId: string) => {
-    if (!user) return;
-
-    if (messageListeners[projectId]) {
-      messageListeners[projectId]();
-    }
-
-    // Use the same global messages collection that the designer uses
+  const fetchMessages = (projectId: string) => {
     const q = query(
       collection(db, "messages"),
       where("projectId", "==", projectId),
       orderBy("timestamp", "asc")
     );
 
-    const unsubscribe = onSnapshot(
+    return onSnapshot(
       q,
       (snapshot) => {
         const msgs = snapshot.docs.map((doc) => {
@@ -148,71 +140,54 @@ export const ProjectHistory = () => {
             text: data.text,
             sender: data.sender,
             senderName:
-              data.senderName ||
-              (data.sender === "client" ? "You" : "Designer"),
+              data.senderName || (data.sender === "client" ? "Client" : "You"),
             timestamp: data.timestamp,
             projectId: data.projectId,
           };
         });
-
-        setMessages((prev) => ({
-          ...prev,
-          [projectId]: msgs,
-        }));
+        setMessages((prev) => ({ ...prev, [projectId]: msgs }));
       },
       (error) => {
-        console.error("Error fetching messages:", error);
+        console.error("Message fetch error:", error);
       }
     );
-
-    setMessageListeners((prev) => ({
-      ...prev,
-      [projectId]: unsubscribe,
-    }));
   };
 
   const handleAddComment = async (projectId: string) => {
     const message = newMessages[projectId]?.trim();
-    if (!message || !user) return;
+    if (!message) return;
 
-    const tempId = `temp-${Date.now()}`;
+    const tempId = Date.now().toString();
+    setNewMessages((prev) => ({ ...prev, [projectId]: "" }));
+    setMessages((prev) => ({
+      ...prev,
+      [projectId]: [
+        ...(prev[projectId] || []),
+        {
+          id: tempId,
+          text: message,
+          sender: "designer",
+          senderName: "You",
+          timestamp: null,
+          projectId,
+        },
+      ],
+    }));
 
     try {
-      // Clear input immediately
-      setNewMessages((prev) => ({ ...prev, [projectId]: "" }));
-
-      // Add optimistic update
-      setMessages((prev) => ({
-        ...prev,
-        [projectId]: [
-          ...(prev[projectId] || []),
-          {
-            id: tempId,
-            text: message,
-            sender: "client",
-            senderName: "You",
-            timestamp: null,
-            projectId,
-          },
-        ],
-      }));
-
-      // Send to the same global messages collection that designer uses
       await addDoc(collection(db, "messages"), {
         projectId,
-        sender: "client",
-        senderName: "Client", // This will be displayed to the designer
+        sender: "designer",
+        senderName: "Designer",
         text: message,
         timestamp: serverTimestamp(),
       });
     } catch (error) {
       console.error("Error sending message:", error);
-      // Revert optimistic update
       setMessages((prev) => ({
         ...prev,
         [projectId]: (prev[projectId] || []).filter((msg) => msg.id !== tempId),
       }));
-      // Restore the message in input
       setNewMessages((prev) => ({ ...prev, [projectId]: message }));
     }
   };
@@ -235,25 +210,27 @@ export const ProjectHistory = () => {
     return "";
   };
 
-  if (loading) {
-    return <div className="text-muted-foreground">Loading projects...</div>;
-  }
+  if (loading)
+    return <div className="text-muted-foreground p-4">Loading projects...</div>;
+  if (projects.length === 0)
+    return <div className="text-muted-foreground p-4">No projects found</div>;
 
   return (
-    <div className="rounded-md border">
+    <div className="container mx-auto rounded-md border mt-12">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Project Name</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Submitted Date</TableHead>
-            <TableHead>Credits Used</TableHead>
+            <TableHead>Credits</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
             <>
               <TableRow
+                key={project.id}
                 onClick={() => toggleExpand(project.id)}
                 className="cursor-pointer hover:bg-gray-50"
               >
@@ -262,7 +239,6 @@ export const ProjectHistory = () => {
                 <TableCell>{project.submittedDate}</TableCell>
                 <TableCell>{project.credits} credits</TableCell>
               </TableRow>
-
               {expanded === project.id && (
                 <TableRow>
                   <TableCell colSpan={4}>
@@ -270,31 +246,27 @@ export const ProjectHistory = () => {
                       <div className="max-h-60 overflow-y-auto space-y-2">
                         {(messages[project.id] || []).length === 0 ? (
                           <div className="text-gray-500 text-sm text-center py-4">
-                            No messages yet. Start the conversation!
+                            No messages yet
                           </div>
                         ) : (
                           (messages[project.id] || []).map((msg) => (
                             <div
                               key={msg.id}
                               className={`flex ${
-                                msg.sender === "client"
+                                msg.sender === "designer"
                                   ? "justify-end"
                                   : "justify-start"
                               }`}
                             >
                               <div
                                 className={`w-fit max-w-[75%] px-3 py-2 rounded-lg text-sm ${
-                                  msg.sender === "client"
+                                  msg.sender === "designer"
                                     ? "bg-blue-100 text-blue-900"
                                     : "bg-gray-200 text-gray-900"
                                 }`}
                               >
                                 <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                  <span>
-                                    {msg.sender === "client"
-                                      ? "You"
-                                      : "Designer"}
-                                  </span>
+                                  <span>{msg.senderName}</span>
                                   <span>{formatTimestamp(msg.timestamp)}</span>
                                 </div>
                                 <div className="text-sm">{msg.text}</div>
@@ -303,11 +275,9 @@ export const ProjectHistory = () => {
                           ))
                         )}
                       </div>
-
                       <div className="flex gap-2 items-center">
                         <Input
                           placeholder="Type your reply..."
-                          className="flex-1"
                           value={newMessages[project.id] || ""}
                           onChange={(e) =>
                             setNewMessages((prev) => ({
@@ -316,11 +286,12 @@ export const ProjectHistory = () => {
                             }))
                           }
                           onKeyPress={(e) => handleKeyPress(e, project.id)}
+                          className="flex-1"
                         />
                         <Button
-                          className="bg-black text-white hover:bg-gray-800"
                           onClick={() => handleAddComment(project.id)}
                           disabled={!newMessages[project.id]?.trim()}
+                          className="bg-black text-white hover:bg-gray-800"
                         >
                           Send
                         </Button>

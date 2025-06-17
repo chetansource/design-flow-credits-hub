@@ -10,34 +10,42 @@ import {
 import { db } from "@/lib/firebase";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
-import { Bell, X } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { KanbanBoard } from "./KanbanBoard";
 import { Project, Comment } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { DesignerProjectsChat } from "./DesignerMessages";
 
 export const DesignerDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [notifications, setNotifications] = useState<Comment[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [activeSection, setActiveSection] = useState<"kanban" | "chat">(
+    "kanban"
+  );
+
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Close notifications when clicking outside
+  // Close notifications popup on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
         setShowNotifications(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -67,7 +75,10 @@ export const DesignerDashboard = () => {
         });
       });
 
-      replies.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      replies.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
       setNotifications(replies);
       setUnreadCount(replies.length);
     };
@@ -151,99 +162,77 @@ export const DesignerDashboard = () => {
     }
   };
 
-  const toggleNotifications = () => {
-    if (!showNotifications) {
-      // When opening notifications, mark all as read
-      setUnreadCount(0);
-    }
-    setShowNotifications(!showNotifications);
-  };
-
   return (
     <div className="px-12 py-8">
+      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold mt-1">Dashboard</h1>
-          
-          {/* Notification Icon */}
-          <div className="relative" ref={notificationRef}>
-            <button
-              onClick={toggleNotifications}
-              className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <Bell size={24} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
-              )}
-            </button>
-
-            {/* Notification Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-800">Notifications</h3>
-                  <button
-                    onClick={() => setShowNotifications(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                
-                <div className="max-h-64 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      No new replies
-                    </div>
-                  ) : (
-                    notifications.map((reply) => (
-                      <div key={reply.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-gray-800 text-sm">
-                            {reply.authorName}
-                          </p>
-                          <span className="text-gray-400">•</span>
-                          <p className="text-xs text-gray-500">
-                            {new Date(reply.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                        <p className="text-gray-700 text-sm">{reply.content}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-                
-                {notifications.length > 0 && (
-                  <div className="p-3 border-t border-gray-200 bg-gray-50">
-                    <button 
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                      onClick={() => setShowNotifications(false)}
-                    >
-                      View all notifications
-                    </button>
-                  </div>
-                )}
-              </div>
+          <div className="flex gap-4 items-center">
+            {["mail.lifedesigner@gmail.com"].includes(user?.email) && (
+              <button
+                onClick={() => navigate("/approve-credits")}
+                className="text-sm px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-900 transition"
+              >
+                Approve Credits
+              </button>
             )}
           </div>
         </div>
       </div>
 
+      {/* Project Overview */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Project Overview</CardTitle>
           <CardDescription>
-            Total projects: {projects.length} | Active: {projects.filter((p) => !["completed", "on_hold"].includes(p.status)).length} | Completed: {projects.filter((p) => p.status === "completed").length}
+            Total projects: {projects.length} | Active:{" "}
+            {
+              projects.filter(
+                (p) => !["completed", "on_hold"].includes(p.status)
+              ).length
+            }{" "}
+            | Completed:{" "}
+            {projects.filter((p) => p.status === "completed").length}
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <div className="h-screen">
-        <KanbanBoard
-          projects={projects}
-          onUpdateProject={handleUpdateProject}
-          onAddComment={handleAddComment}
-        />
+      {/* Accordion Toggle Buttons */}
+      <div className="flex gap-4 mb-6">
+        <button
+          onClick={() => setActiveSection("kanban")}
+          className={`px-4 py-2 rounded-md font-medium transition ${
+            activeSection === "kanban"
+              ? "bg-black text-white"
+              : "bg-gray-200 text-black hover:bg-gray-300"
+          }`}
+        >
+          Project Board
+        </button>
+        <button
+          onClick={() => setActiveSection("chat")}
+          className={`px-4 py-2 rounded-md font-medium transition ${
+            activeSection === "chat"
+              ? "bg-black text-white"
+              : "bg-gray-200 text-black hover:bg-gray-300"
+          }`}
+        >
+          Project Chat
+        </button>
+      </div>
+
+      {/* Accordion Content Section */}
+      <div className="border rounded-xl p-4 shadow-md bg-white">
+        {activeSection === "kanban" && (
+          <KanbanBoard
+            projects={projects}
+            onUpdateProject={handleUpdateProject}
+            onAddComment={handleAddComment}
+          />
+        )}
+
+        {activeSection === "chat" && <DesignerProjectsChat />}
       </div>
     </div>
   );
