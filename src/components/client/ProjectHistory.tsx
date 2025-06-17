@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 interface Project {
   id: string;
   name: string;
+  projectName: string;
   status: string;
   submittedDate: string;
   credits: number;
@@ -257,7 +258,7 @@ export const ProjectHistory = () => {
                 onClick={() => toggleExpand(project.id)}
                 className="cursor-pointer hover:bg-gray-50"
               >
-                <TableCell className="font-medium">{project.name}</TableCell>
+                <TableCell className="font-medium">{project.projectName}</TableCell>
                 <TableCell>{getStatusBadge(project.status)}</TableCell>
                 <TableCell>{project.submittedDate}</TableCell>
                 <TableCell>{project.credits} credits</TableCell>

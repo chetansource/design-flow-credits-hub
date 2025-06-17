@@ -34,6 +34,7 @@ import { useNavigate } from "react-router-dom";
 interface Project {
   id: string;
   name: string;
+  projectName: string;
   status: string;
   submittedDate: string;
   credits: number;
@@ -89,6 +90,7 @@ export const DesignerProjectsChat = () => {
           return {
             id: doc.id,
             name: data.name || "Unnamed Project",
+            projectName: data.projectName || "Untitled Project",
             status: data.status || "new",
             submittedDate: submittedTimestamp
               ? new Date(submittedTimestamp).toLocaleDateString()
@@ -234,7 +236,7 @@ export const DesignerProjectsChat = () => {
                 onClick={() => toggleExpand(project.id)}
                 className="cursor-pointer hover:bg-gray-50"
               >
-                <TableCell className="font-medium">{project.name}</TableCell>
+                <TableCell className="font-medium">{project.projectName}</TableCell>
                 <TableCell>{getStatusBadge(project.status)}</TableCell>
                 <TableCell>{project.submittedDate}</TableCell>
                 <TableCell>{project.credits} credits</TableCell>
