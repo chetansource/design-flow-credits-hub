@@ -33,7 +33,11 @@ export interface Project {
   clientName: string;
   clientEmail?: string;
   name: string;
+  projectName: string;
   credits: number;
+  submittedDate: string;
+  quantity: number;
+  timeLine: string;
   title: string;
   designItem: DesignItem;
   selectedSize: string;

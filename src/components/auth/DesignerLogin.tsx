@@ -25,6 +25,7 @@ export const DesignerLogin = () => {
     "account@lifedesigner.io",
     "grey@lifedesigner.io",
     "shilpa@lifedesigner.io",
+    "alishapatra2001@gmail.com",
   ];
 
   useEffect(() => {

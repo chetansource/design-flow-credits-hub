@@ -22,6 +22,8 @@ export const ClientLogin = () => {
   // List of allowed client emails
   const allowedClients = [
     "heygrey05@gmail.com",
+    "desikan1984@gmail.com",
+    "silky88sharan@gmail.com",
     // Add more client emails as needed
   ];
 
@@ -81,15 +83,13 @@ export const ClientLogin = () => {
               <Button onClick={handleVerifyEmail} className="w-full" size="lg">
                 Verify Email
               </Button>
-              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+              {error && (
+                <p className="text-sm text-red-500 text-center">{error}</p>
+              )}
             </>
           ) : (
             <>
-              <Button
-                onClick={handleClientLogin}
-                className="w-full"
-                size="lg"
-              >
+              <Button onClick={handleClientLogin} className="w-full" size="lg">
                 Sign in with Google as Client
               </Button>
               <Button

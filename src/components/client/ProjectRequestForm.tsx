@@ -57,6 +57,7 @@ export const ProjectRequestForm = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [timeLine, SetTimeLine] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -87,7 +88,9 @@ export const ProjectRequestForm = ({
       return;
     }
 
-    const newCredits = currentCredits - selectedItem.creditsPerCreative;
+    const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
+
+    const newCredits = currentCredits - totalCreditsNeeded;
 
     await addDoc(collection(db, "users", user.uid, "projects"), {
       name: selectedItem.name,
@@ -95,7 +98,9 @@ export const ProjectRequestForm = ({
       driveLink,
       projectName,
       timeLine,
-      credits: selectedItem.creditsPerCreative,
+      quantity,
+      credits: totalCreditsNeeded,
+      creditsPerCreative: selectedItem.creditsPerCreative,
       submittedDate: serverTimestamp(),
       status: "new",
       clientId: user.uid,
@@ -108,7 +113,7 @@ export const ProjectRequestForm = ({
 
     await addDoc(collection(db, "users", user.uid, "creditHistory"), {
       type: "used",
-      amount: -selectedItem.creditsPerCreative,
+      amount: -totalCreditsNeeded,
       description: `Requested ${selectedItem.name}`,
       date: serverTimestamp(),
       balance: newCredits,
@@ -121,6 +126,7 @@ export const ProjectRequestForm = ({
     setIsSubmitting(false);
     setProjectName("");
     SetTimeLine("");
+    setQuantity(1);
     refetchCredits();
     onSuccess();
   };
@@ -182,6 +188,19 @@ export const ProjectRequestForm = ({
           </DialogContent>
         </Dialog>
       </div>
+
+      {selectedItem && (
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Quantity</Label>
+          <Input
+            id="quantity"
+            type="number"
+            placeholder="Enter Quantity You Need"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+          />
+        </div>
+      )}
 
       {selectedItem && (
         <>
