@@ -18,6 +18,7 @@ import {
   addDoc,
   serverTimestamp,
   where,
+  collectionGroup,
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,7 @@ export const ProjectHistory = () => {
     if (!user) return;
 
     const q = query(
-      collection(db, "users", user.uid, "projects"),
+      collectionGroup(db, "projects"),
       orderBy("submittedDate", "desc")
     );
 
@@ -104,7 +105,6 @@ export const ProjectHistory = () => {
 
     return () => {
       unsubscribe();
-      // Clean up message listeners
       Object.values(messageListeners).forEach((unsub) => unsub());
     };
   }, [user]);
@@ -255,10 +255,13 @@ export const ProjectHistory = () => {
           {projects.map((project) => (
             <>
               <TableRow
+                key={project.id}
                 onClick={() => toggleExpand(project.id)}
                 className="cursor-pointer hover:bg-gray-50"
               >
-                <TableCell className="font-medium">{project.projectName}</TableCell>
+                <TableCell className="font-medium">
+                  {project.projectName}
+                </TableCell>
                 <TableCell>{getStatusBadge(project.status)}</TableCell>
                 <TableCell>{project.submittedDate}</TableCell>
                 <TableCell>{project.credits} credits</TableCell>
