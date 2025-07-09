@@ -72,26 +72,45 @@ export const ProjectRequestForm = ({
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !selectedItem) return;
+  e.preventDefault();
+  if (!user || !selectedItem) return;
 
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    const currentCredits = userData?.credits || 0;
+  try {
+    // Step 1: Get all client users
+    const clientSnap = await getDocs(collection(db, "users"));
+    const clientDocs = clientSnap.docs.filter(
+      (doc) => doc.data().role === "client"
+    );
 
-    if (currentCredits < selectedItem.creditsPerCreative) {
+    if (clientDocs.length === 0) {
+      toast({ title: "No client users found", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Step 2: Get the first client's credits as reference
+    const currentCredits = clientDocs[0].data().credits || 0;
+    const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
+
+    // Step 3: Check if credits are sufficient
+    if (currentCredits < totalCreditsNeeded) {
       toast({ title: "Insufficient credits", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
 
-    const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
-
     const newCredits = currentCredits - totalCreditsNeeded;
 
+    // Step 4: Update credits for all clients
+    const updatePromises = clientDocs.map((clientDoc) =>
+      updateDoc(doc(db, "users", clientDoc.id), {
+        credits: newCredits,
+      })
+    );
+
+    // Step 5: Create project only for the requesting client
     await addDoc(collection(db, "users", user.uid, "projects"), {
       name: selectedItem.name,
       description,
@@ -106,18 +125,22 @@ export const ProjectRequestForm = ({
       clientId: user.uid,
       clientName: user.displayName || "Anonymous",
       clientEmail: user.email || "",
-      comments: [], // Empty comments array for designer use
+      comments: [],
     });
 
-    await updateDoc(userRef, { credits: newCredits });
+    // Step 6: Add credit history for all clients
+    const creditHistoryPromises = clientDocs.map((clientDoc) =>
+      addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
+        type: "used",
+        amount: -totalCreditsNeeded,
+        description: `Requested ${selectedItem.name} by ${user.displayName || "Client"}`,
+        date: serverTimestamp(),
+        balance: newCredits,
+      })
+    );
 
-    await addDoc(collection(db, "users", user.uid, "creditHistory"), {
-      type: "used",
-      amount: -totalCreditsNeeded,
-      description: `Requested ${selectedItem.name}`,
-      date: serverTimestamp(),
-      balance: newCredits,
-    });
+    // Step 7: Wait for all Firestore writes
+    await Promise.all([...updatePromises, ...creditHistoryPromises]);
 
     toast({ title: "Project submitted!" });
     setSelectedItem(null);
@@ -129,7 +152,17 @@ export const ProjectRequestForm = ({
     setQuantity(1);
     refetchCredits();
     onSuccess();
-  };
+  } catch (error) {
+    console.error("Submission error:", error);
+    toast({
+      title: "Submission failed",
+      description: "Something went wrong while submitting your project.",
+      variant: "destructive",
+    });
+    setIsSubmitting(false);
+  }
+};
+
 
   const filteredItems = designItems.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())

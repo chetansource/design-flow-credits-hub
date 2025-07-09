@@ -22,11 +22,9 @@ export const DesignerLogin = () => {
   // List of allowed designer emails
   const allowedDesigners = [
     "mail.lifedesigner@gmail.com",
-    "account@lifedesigner.io",
-    "grey@lifedesigner.io",
-    "shilpa@lifedesigner.io",
     "alishapatra2001@gmail.com",
-    "meenakshipriyeshwork@gmail.com"
+    "meenakshipriyeshwork@gmail.com",
+    "shipra.design.01@gmail.com"
   ];
 
   useEffect(() => {

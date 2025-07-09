@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/firebase";
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -21,24 +23,28 @@ import {
 
 export const CreditBalance = () => {
   const { user } = useAuth();
-  const [carryover, setCarryover] = useState<number>(0); // optional if using
+  const [carryover, setCarryover] = useState<number>(0);
+  const [monthlyCredits, setMonthlyCredits] = useState<number>(110);
   const [approvedCredits, setApprovedCredits] = useState<number>(0);
   const [usedCredits, setUsedCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-
-  // Static Monthly Credits
-  const monthlyCredits = 110;
 
   const fetchCreditDetails = async () => {
     if (!user) return;
 
     try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      const userMonthlyCredits = Number(userData?.monthlyCredits || 110);
+      setMonthlyCredits(userMonthlyCredits);
+
       const now = new Date();
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-      // Query used credits from creditHistory
+      // --- Used Credits This Month ---
       const creditRef = collection(db, "users", user.uid, "creditHistory");
       const usedQuery = query(
         creditRef,
@@ -46,6 +52,17 @@ export const CreditBalance = () => {
         where("date", "<", Timestamp.fromDate(nextMonthStart)),
         where("type", "==", "used")
       );
+
+      const usedSnap = await getDocs(usedQuery);
+      let usedThisMonth = 0;
+      usedSnap.forEach((doc) => {
+        const d = doc.data();
+        usedThisMonth += Math.abs(Number(d.amount || 0));
+      });
+
+      setUsedCredits(usedThisMonth);
+
+      // --- Carryover from Last Month ---
       const prevQuery = query(
         creditRef,
         where("date", ">=", Timestamp.fromDate(lastMonthStart)),
@@ -53,28 +70,21 @@ export const CreditBalance = () => {
         orderBy("date")
       );
 
-      const [usedSnap, prevSnap] = await Promise.all([
-        getDocs(usedQuery),
-        getDocs(prevQuery),
-      ]);
-
-      let usedThisMonth = 0;
-      usedSnap.forEach((doc) => {
+      const prevSnap = await getDocs(prevQuery);
+      let lastMonthUsed = 0;
+      prevSnap.forEach((doc) => {
         const d = doc.data();
-        usedThisMonth += Math.abs(d.amount);
+        if (d.type === "used") {
+          lastMonthUsed += Math.abs(Number(d.amount || 0));
+        }
       });
 
-      let carryover = 0;
-      if (!prevSnap.empty) {
-        const docs = prevSnap.docs;
-        const lastDoc = docs[docs.length - 1];
-        const lastData = lastDoc.data();
-        carryover = lastData.balance || 0;
-      }
+      const unusedCredits = userMonthlyCredits - lastMonthUsed;
+      const carryoverCredits = unusedCredits > 0 ? Math.min(unusedCredits, userMonthlyCredits) : 0;
+      setCarryover(carryoverCredits);
 
-      // ✅ Fetch approved extra credits from creditsbuyed
+      // --- Approved Credits Bought ---
       const creditsBuyedRef = collection(db, "users", user.uid, "creditsbuyed");
-      console.log("Fetching approved credits from:", creditsBuyedRef);
       const approvedQuery = query(
         creditsBuyedRef,
         where("status", "==", "approved")
@@ -84,13 +94,13 @@ export const CreditBalance = () => {
       let extraApprovedCredits = 0;
       approvedSnap.forEach((doc) => {
         const data = doc.data();
-        extraApprovedCredits += Number(data.buyedcredits || 0);
+        const parsed = parseFloat(data.buyedcredits);
+        if (!isNaN(parsed)) {
+          extraApprovedCredits += parsed;
+        }
       });
 
-      // Save states
-      setUsedCredits(usedThisMonth);
       setApprovedCredits(extraApprovedCredits);
-      console.log(extraApprovedCredits);
     } catch (err) {
       console.error("Error fetching credit details:", err);
     }
@@ -111,7 +121,7 @@ export const CreditBalance = () => {
   }
 
   const totalAvailable = monthlyCredits + carryover + approvedCredits;
-  const creditsRemaining = totalAvailable - usedCredits;
+  const creditsRemaining = Math.max(0, totalAvailable - usedCredits);
   const usagePercentage =
     totalAvailable === 0 ? 0 : (usedCredits / totalAvailable) * 100;
 
