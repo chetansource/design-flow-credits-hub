@@ -169,7 +169,7 @@ export const DesignerDashboard = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold mt-1">Dashboard</h1>
           <div className="flex gap-4 items-center">
-            {["mail.lifedesigner@gmail.com"].includes(user?.email) && (
+            {["mail.lifedesigner@gmail.com","mvvignesh9944@gmail.com"].includes(user?.email) && (
               <button
                 onClick={() => navigate("/approve-credits")}
                 className="text-sm px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-900 transition"

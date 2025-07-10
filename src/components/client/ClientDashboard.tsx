@@ -66,11 +66,11 @@ export const ClientDashboard = () => {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="new-project">New Project</TabsTrigger>
           <TabsTrigger value="projects">My Projects</TabsTrigger>
-          <TabsTrigger value="credits">Credit History</TabsTrigger>
+          {/* <TabsTrigger value="credits">Credit History</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -168,7 +168,7 @@ export const ClientDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="credits">
+        {/* <TabsContent value="credits">
           <Card>
             <CardHeader>
               <CardTitle>Credit Usage History</CardTitle>
@@ -180,7 +180,7 @@ export const ClientDashboard = () => {
               <CreditHistory />
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );

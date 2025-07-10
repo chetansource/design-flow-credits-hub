@@ -30,6 +30,7 @@ interface Project {
   status: string;
   submittedDate: string;
   credits: number;
+  quantity: number;
 }
 
 interface Message {
@@ -249,6 +250,7 @@ export const ProjectHistory = () => {
             <TableHead>Status</TableHead>
             <TableHead>Submitted Date</TableHead>
             <TableHead>Credits Used</TableHead>
+            <TableHead>Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -265,6 +267,7 @@ export const ProjectHistory = () => {
                 <TableCell>{getStatusBadge(project.status)}</TableCell>
                 <TableCell>{project.submittedDate}</TableCell>
                 <TableCell>{project.credits} credits</TableCell>
+                <TableCell>{project.quantity ? project.quantity : "N/A"} </TableCell>
               </TableRow>
 
               {expanded === project.id && (

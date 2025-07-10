@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { collectionGroup, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
+import {
+  collectionGroup,
+  getDocs,
+  updateDoc,
+  doc,
+  getDoc,
+  addDoc,
+  collection,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Card,
@@ -25,7 +33,7 @@ export const RequestedCredits = () => {
   const [creditRequests, setCreditRequests] = useState<CreditRequest[]>([]);
 
   const navigate = useNavigate();
-  const {user}= useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchCredits = async () => {
@@ -45,17 +53,52 @@ export const RequestedCredits = () => {
   }, []);
 
   const approveCredits = async (path: string) => {
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    const currentCredits = userData?.credits || 0;
+    const creditToApprove = creditRequests.find((c) => c.path === path);
+    if (!creditToApprove) return;
 
-    const newCredits = currentCredits + creditRequests.find(c => c.path === path)?.buyedcredits || 0;
-    await updateDoc(doc(db, path), { status: "approved" });
-    await updateDoc(userRef, { credits: newCredits });
+    const { buyedcredits, username } = creditToApprove;
 
-    setCreditRequests((prev) => prev.filter((c) => c.path !== path));
-    navigate("/designer");
+    try {
+      // 1. Update the credit request document to approved
+      await updateDoc(doc(db, path), { status: "approved" });
+
+      // 2. Fetch all clients
+      const clientsSnap = await getDocs(collection(db, "users"));
+      const clientDocs = clientsSnap.docs.filter(
+        (doc) => doc.data().role === "client"
+      );
+
+      if (clientDocs.length === 0) return;
+
+      // 3. For each client, update credits
+      const updatePromises = clientDocs.map((clientDoc) => {
+        const data = clientDoc.data();
+        const newCredits = (data.credits || 0) + buyedcredits;
+
+        return updateDoc(doc(db, "users", clientDoc.id), {
+          credits: newCredits,
+        });
+      });
+
+      // 4. Optionally: Add to creditHistory for all clients
+      const creditHistoryPromises = clientDocs.map((clientDoc) =>
+        addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
+          type: "bought",
+          amount: buyedcredits,
+          description: `Admin approved credits requested by ${username}`,
+          date: new Date(),
+          balance: (clientDoc.data().credits || 0) + buyedcredits,
+        })
+      );
+
+      await Promise.all([...updatePromises, ...creditHistoryPromises]);
+
+      // 5. Clean up UI state
+      setCreditRequests((prev) => prev.filter((c) => c.path !== path));
+      navigate("/designer");
+    } catch (err) {
+      console.error("Error approving credits:", err);
+    }
   };
 
   if (creditRequests.length === 0)
