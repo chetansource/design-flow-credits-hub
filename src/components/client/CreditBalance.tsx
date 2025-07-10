@@ -62,26 +62,34 @@ export const CreditBalance = () => {
 
       setUsedCredits(usedThisMonth);
 
-      // --- Carryover from Last Month ---
-      const prevQuery = query(
-        creditRef,
-        where("date", ">=", Timestamp.fromDate(lastMonthStart)),
-        where("date", "<", Timestamp.fromDate(thisMonthStart)),
-        orderBy("date")
-      );
+      // // --- Carryover from Last Month ---
+      // const prevQuery = query(
+      //   creditRef,
+      //   where("date", ">=", Timestamp.fromDate(lastMonthStart)),
+      //   where("date", "<", Timestamp.fromDate(thisMonthStart)),
+      //   orderBy("date")
+      // );
 
-      const prevSnap = await getDocs(prevQuery);
-      let lastMonthUsed = 0;
-      prevSnap.forEach((doc) => {
-        const d = doc.data();
-        if (d.type === "used") {
-          lastMonthUsed += Math.abs(Number(d.amount || 0));
-        }
-      });
+      // const prevSnap = await getDocs(prevQuery);
+      // let lastMonthUsed = 0;
+      // prevSnap.forEach((doc) => {
+      //   const d = doc.data();
+      //   if (d.type === "used") {
+      //     lastMonthUsed += Math.abs(Number(d.amount || 0));
+      //   }
+      // });
 
-      const unusedCredits = userMonthlyCredits - lastMonthUsed;
-      const carryoverCredits = unusedCredits > 0 ? Math.min(unusedCredits, userMonthlyCredits) : 0;
-      setCarryover(carryoverCredits);
+      // const unusedCredits = userMonthlyCredits - lastMonthUsed;
+      // const carryoverCredits = unusedCredits > 0 ? Math.min(unusedCredits, userMonthlyCredits) : 0;
+      // setCarryover(carryoverCredits);
+
+      const sharedCreditDocRef = doc(db, "creditHistoryValue", "sharedClient"); // <-- this should match your document ID
+      const sharedCreditSnap = await getDoc(sharedCreditDocRef);
+      if (sharedCreditSnap.exists()) {
+        const sharedData = sharedCreditSnap.data();
+        const sharedCarryover = Number(sharedData?.carryover || 0);
+        setCarryover(sharedCarryover);
+      }
 
       // --- Approved Credits Bought ---
       const creditsBuyedRef = collection(db, "users", user.uid, "creditsbuyed");
