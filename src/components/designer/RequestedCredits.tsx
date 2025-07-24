@@ -71,27 +71,48 @@ export const RequestedCredits = () => {
       if (clientDocs.length === 0) return;
 
       // 3. For each client, update credits
-      const updatePromises = clientDocs.map((clientDoc) => {
-        const data = clientDoc.data();
-        const newCredits = (data.credits || 0) + buyedcredits;
+      // const updatePromises = clientDocs.map((clientDoc) => {
+      //   const data = clientDoc.data();
+      //   const newCredits = (data.credits || 0) + buyedcredits;
 
-        return updateDoc(doc(db, "users", clientDoc.id), {
-          credits: newCredits,
-        });
-      });
-
+      //   return updateDoc(doc(db, "users", clientDoc.id), {
+      //     credits: newCredits,
+      //   });
+      // });
       // 4. Optionally: Add to creditHistory for all clients
-      const creditHistoryPromises = clientDocs.map((clientDoc) =>
-        addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
+      // const creditHistoryPromises = clientDocs.map((clientDoc) =>
+      //   addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
+      //     type: "bought",
+      //     amount: buyedcredits,
+      //     description: `Admin approved credits requested by ${username}`,
+      //     date: new Date(),
+      //     balance: (clientDoc.data().credits || 0) + buyedcredits,
+      //   })
+      // );
+      // await Promise.all([...updatePromises, ...creditHistoryPromises]);
+
+      // 3. For each client, update credits and add credit history
+      const updateAndLogPromises = clientDocs.map(async (clientDoc) => {
+        const userRef = doc(db, "users", clientDoc.id);
+        const currentCredits = clientDoc.data().credits || 0;
+        const updatedCredits = currentCredits + buyedcredits;
+
+        // ✅ Update user's credits
+        await updateDoc(userRef, {
+          credits: updatedCredits,
+        });
+
+        // ✅ Add to user's credit history
+        await addDoc(collection(db, "users", clientDoc.id, "creditsbuyed"), {
           type: "bought",
           amount: buyedcredits,
           description: `Admin approved credits requested by ${username}`,
           date: new Date(),
-          balance: (clientDoc.data().credits || 0) + buyedcredits,
-        })
-      );
+          balance: updatedCredits,
+        });
+      });
 
-      await Promise.all([...updatePromises, ...creditHistoryPromises]);
+      await Promise.all(updateAndLogPromises);
 
       // 5. Clean up UI state
       setCreditRequests((prev) => prev.filter((c) => c.path !== path));

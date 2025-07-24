@@ -25,6 +25,7 @@ export const ClientLogin = () => {
     "desikan1984@gmail.com",
     "silky88sharan@gmail.com",
     "itsmeeio.ld.1@gmail.com",
+    "petzjs@gmail.com",
     // Add more client emails as needed
   ];
 

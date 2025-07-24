@@ -8,6 +8,7 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// for poduction use
 const firebaseConfig = {
   apiKey: "AIzaSyCk4mKaqaYNbtAeeCY77hhRhHlaVZXgCJg",
   authDomain: "credit-tracker-236c3.firebaseapp.com",
@@ -17,6 +18,17 @@ const firebaseConfig = {
   appId: "1:443985382041:web:2cd31f46129eef77be0608",
   measurementId: "G-2WEQ4LD3RL",
 };
+
+// Test Firebase configuration
+// const firebaseConfig = {
+//   apiKey: "AIzaSyArBlTmShXNcZtiM3byyRsrWIYhFbuemWc",
+//   authDomain: "credit-tracker-development.firebaseapp.com",
+//   projectId: "credit-tracker-development",
+//   storageBucket: "credit-tracker-development.firebasestorage.app",
+//   messagingSenderId: "377224360058",
+//   appId: "1:377224360058:web:7ee22e527c3ad9341a4bc3",
+//   measurementId: "G-ZJB70EH3XQ"
+// };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

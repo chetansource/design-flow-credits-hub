@@ -26,6 +26,7 @@ import {
   serverTimestamp,
   getDoc,
   getDocs,
+  writeBatch,
 } from "firebase/firestore";
 
 interface DesignItem {
@@ -72,97 +73,105 @@ export const ProjectRequestForm = ({
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!user || !selectedItem) return;
+    e.preventDefault();
+    if (!user || !selectedItem) return;
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  try {
-    // Step 1: Get all client users
-    const clientSnap = await getDocs(collection(db, "users"));
-    const clientDocs = clientSnap.docs.filter(
-      (doc) => doc.data().role === "client"
-    );
+    try {
+      // 1. Get all client users
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const clientUsers = usersSnapshot.docs.filter(
+        (doc) => doc.data().role === "client"
+      );
 
-    if (clientDocs.length === 0) {
-      toast({ title: "No client users found", variant: "destructive" });
+      if (clientUsers.length === 0) {
+        throw new Error("No client users found");
+      }
+
+      // 2. Verify at least one client has enough credits
+      const sampleClient = clientUsers[0].data();
+      const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
+
+      if (sampleClient.credits < totalCreditsNeeded) {
+        throw new Error("Insufficient credits in the shared pool");
+      }
+
+      // 3. Calculate new credits value (same for all clients)
+      const newCreditsValue = sampleClient.credits - totalCreditsNeeded;
+
+      // 4. Prepare all batch operations
+      const batch = writeBatch(db);
+
+      // Update all clients' credits
+      clientUsers.forEach((clientDoc) => {
+        const clientRef = doc(db, "users", clientDoc.id);
+        batch.update(clientRef, {
+          credits: newCreditsValue,
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      // Create project for current user
+      const projectRef = doc(collection(db, `users/${user.uid}/projects`));
+      batch.set(projectRef, {
+        name: selectedItem.name,
+        description,
+        driveLink,
+        projectName,
+        timeLine,
+        quantity,
+        credits: totalCreditsNeeded,
+        creditsPerCreative: selectedItem.creditsPerCreative,
+        submittedDate: serverTimestamp(),
+        status: "new",
+        clientId: user.uid,
+        clientName: user.displayName || "Anonymous",
+        clientEmail: user.email || "",
+        comments: [],
+      });
+
+      // Add credit history for all clients
+      clientUsers.forEach((clientDoc) => {
+        const historyRef = doc(
+          collection(db, `users/${clientDoc.id}/creditHistory`)
+        );
+        batch.set(historyRef, {
+          type: "used",
+          amount: -totalCreditsNeeded,
+          description: `Project "${projectName}" by ${
+            user.displayName || "Client"
+          }`,
+          date: serverTimestamp(),
+          balance: newCreditsValue,
+        });
+      });
+
+      // 5. Execute all operations as a single batch
+      await batch.commit();
+
+      toast({ title: "Project submitted successfully!" });
+      // Reset form...
+      // ✅ Reset form fields
+      setProjectName("");
+      SetTimeLine("");
+      setQuantity(1);
+      setDescription("");
+      setDriveLink("");
+      setSelectedItem(null);
+      setSearch("");
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast({
+        title: "Submission failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    // Step 2: Get the first client's credits as reference
-    const currentCredits = clientDocs[0].data().credits || 0;
-    const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
-
-    // Step 3: Check if credits are sufficient
-    if (currentCredits < totalCreditsNeeded) {
-      toast({ title: "Insufficient credits", variant: "destructive" });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const newCredits = currentCredits - totalCreditsNeeded;
-
-    // Step 4: Update credits for all clients
-    const updatePromises = clientDocs.map((clientDoc) =>
-      updateDoc(doc(db, "users", clientDoc.id), {
-        credits: newCredits,
-      })
-    );
-
-    // Step 5: Create project only for the requesting client
-    await addDoc(collection(db, "users", user.uid, "projects"), {
-      name: selectedItem.name,
-      description,
-      driveLink,
-      projectName,
-      timeLine,
-      quantity,
-      credits: totalCreditsNeeded,
-      creditsPerCreative: selectedItem.creditsPerCreative,
-      submittedDate: serverTimestamp(),
-      status: "new",
-      clientId: user.uid,
-      clientName: user.displayName || "Anonymous",
-      clientEmail: user.email || "",
-      comments: [],
-    });
-
-    // Step 6: Add credit history for all clients
-    const creditHistoryPromises = clientDocs.map((clientDoc) =>
-      addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
-        type: "used",
-        amount: -totalCreditsNeeded,
-        description: `Requested ${selectedItem.name} by ${user.displayName || "Client"}`,
-        date: serverTimestamp(),
-        balance: newCredits,
-      })
-    );
-
-    // Step 7: Wait for all Firestore writes
-    await Promise.all([...updatePromises, ...creditHistoryPromises]);
-
-    toast({ title: "Project submitted!" });
-    setSelectedItem(null);
-    setDescription("");
-    setDriveLink("");
-    setIsSubmitting(false);
-    setProjectName("");
-    SetTimeLine("");
-    setQuantity(1);
-    refetchCredits();
-    onSuccess();
-  } catch (error) {
-    console.error("Submission error:", error);
-    toast({
-      title: "Submission failed",
-      description: "Something went wrong while submitting your project.",
-      variant: "destructive",
-    });
-    setIsSubmitting(false);
-  }
-};
-
+  };
 
   const filteredItems = designItems.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
