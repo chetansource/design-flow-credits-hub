@@ -41,11 +41,13 @@ interface DesignItem {
 interface ProjectRequestFormProps {
   onSuccess: () => void;
   refetchCredits: () => void;
+  creditsRemaining: number | null;
 }
 
 export const ProjectRequestForm = ({
   onSuccess,
   refetchCredits,
+  creditsRemaining,
 }: ProjectRequestFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -72,6 +74,8 @@ export const ProjectRequestForm = ({
     fetchItems();
   }, []);
 
+  console.log("Credits Remaining:", creditsRemaining);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedItem) return;
@@ -93,12 +97,12 @@ export const ProjectRequestForm = ({
       const sampleClient = clientUsers[0].data();
       const totalCreditsNeeded = quantity * selectedItem.creditsPerCreative;
 
-      if (sampleClient.credits < totalCreditsNeeded) {
+      if (creditsRemaining < totalCreditsNeeded) {
         throw new Error("Insufficient credits in the shared pool");
       }
 
       // 3. Calculate new credits value (same for all clients)
-      const newCreditsValue = sampleClient.credits - totalCreditsNeeded;
+      const newCreditsValue = creditsRemaining - totalCreditsNeeded;
 
       // 4. Prepare all batch operations
       const batch = writeBatch(db);

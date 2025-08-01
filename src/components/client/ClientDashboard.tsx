@@ -15,28 +15,59 @@ import { CreditHistory } from "./CreditHistory";
 import { CommentHistory } from "../commentHistory/CommentHistory";
 import { Link, Minus, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export const ClientDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [credits, setCredits] = useState(10);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+
 
   const increment = () => setCredits((prev) => prev + 10);
   const decrement = () => setCredits((prev) => (prev > 10 ? prev - 10 : prev));
+
+  // const handleSubmit = async () => {
+  //   if (!user) return;
+
+  //   try {
+  //     await addDoc(collection(db, "users", user.uid, "creditsbuyed"), {
+  //       userid: user.uid,
+  //       buyedcredits: credits,
+  //       status: "requested", // or "approved" based on your flow
+  //       username: user.displayName || "Unknown",
+  //       timestamp: new Date(),
+  //     });
+
+  //     alert("Credit request submitted!");
+  //   } catch (error) {
+  //     console.error("Error submitting credit request:", error);
+  //     alert("Failed to submit request. Please try again.");
+  //   }
+  // };
 
   const handleSubmit = async () => {
     if (!user) return;
 
     try {
-      await addDoc(collection(db, "users", user.uid, "creditsbuyed"), {
-        userid: user.uid,
-        buyedcredits: credits,
-        status: "requested", // or "approved" based on your flow
-        username: user.displayName || "Unknown",
-        timestamp: new Date(),
-      });
+      const clientsSnap = await getDocs(collection(db, "users"));
+      const clientDocs = clientsSnap.docs.filter(
+        (doc) => doc.data().role === "client"
+      );
+
+      // For each client, add a requested credit entry
+      const createRequests = clientDocs.map((clientDoc) =>
+        addDoc(collection(db, "users", clientDoc.id, "creditsbuyed"), {
+          userid: user.uid, // who initiated
+          buyedcredits: credits,
+          status: "requested",
+          username: user.displayName || "Unknown",
+          timestamp: new Date(),
+        })
+      );
+
+      await Promise.all(createRequests);
 
       alert("Credit request submitted!");
     } catch (error) {
@@ -75,7 +106,7 @@ export const ClientDashboard = () => {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <CreditBalance />
+            <CreditBalance onCreditsUpdate={setCreditsRemaining} />
 
             <div className="flex flex-col items-start gap-2">
               <button
@@ -149,6 +180,7 @@ export const ClientDashboard = () => {
               <ProjectRequestForm
                 onSuccess={() => setActiveTab("projects")}
                 refetchCredits={() => window.location.reload()} // Simple refetch for now
+                creditsRemaining={creditsRemaining}
               />
             </CardContent>
           </Card>

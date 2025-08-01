@@ -19,16 +19,20 @@ import {
   where,
   Timestamp,
   orderBy,
+  updateDoc,
 } from "firebase/firestore";
+interface CreditBalanceProps {
+  onCreditsUpdate: (credits: number) => void;
+}
 
-export const CreditBalance = () => {
+export const CreditBalance = ({ onCreditsUpdate }: CreditBalanceProps) => {
   const { user } = useAuth();
   const [carryover, setCarryover] = useState<number>(0);
   const [monthlyCredits, setMonthlyCredits] = useState<number>(110);
   const [approvedCredits, setApprovedCredits] = useState<number>(0);
   const [usedCredits, setUsedCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-
+  let creditsRemaining = 0;
   const fetchCreditDetails = async () => {
     if (!user) return;
 
@@ -62,33 +66,83 @@ export const CreditBalance = () => {
 
       setUsedCredits(usedThisMonth);
 
-      // // --- Carryover from Last Month ---
-      // const prevQuery = query(
-      //   creditRef,
-      //   where("date", ">=", Timestamp.fromDate(lastMonthStart)),
-      //   where("date", "<", Timestamp.fromDate(thisMonthStart)),
-      //   orderBy("date")
-      // );
-
-      // const prevSnap = await getDocs(prevQuery);
-      // let lastMonthUsed = 0;
-      // prevSnap.forEach((doc) => {
-      //   const d = doc.data();
-      //   if (d.type === "used") {
-      //     lastMonthUsed += Math.abs(Number(d.amount || 0));
-      //   }
-      // });
-
-      // const unusedCredits = userMonthlyCredits - lastMonthUsed;
-      // const carryoverCredits = unusedCredits > 0 ? Math.min(unusedCredits, userMonthlyCredits) : 0;
-      // setCarryover(carryoverCredits);
-
-      const sharedCreditDocRef = doc(db, "creditHistoryValue", "sharedClient"); // <-- this should match your document ID
+      const sharedCreditDocRef = doc(db, "creditHistoryValue", "sharedClient");
       const sharedCreditSnap = await getDoc(sharedCreditDocRef);
+
       if (sharedCreditSnap.exists()) {
         const sharedData = sharedCreditSnap.data();
         const sharedCarryover = Number(sharedData?.carryover || 0);
-        setCarryover(sharedCarryover);
+        const dateUpdated = sharedData?.dateUpdated?.toDate?.();
+
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const lastUpdatedMonth = dateUpdated?.getMonth?.();
+        const lastUpdatedYear = dateUpdated?.getFullYear?.();
+
+        console.log("▶️ Carryover Check Log:");
+        console.log("Current Month:", currentMonth + 1, "Year:", currentYear);
+        console.log(
+          "Last Updated Month:",
+          lastUpdatedMonth + 1,
+          "Year:",
+          lastUpdatedYear
+        );
+
+        if (
+          lastUpdatedMonth !== currentMonth ||
+          lastUpdatedYear !== currentYear
+        ) {
+          console.log("➡️ New month detected. Updating carryover...");
+
+          const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
+          const thisMonthStart = new Date(currentYear, currentMonth, 1);
+
+          const prevQuery = query(
+            creditRef,
+            where("date", ">=", Timestamp.fromDate(lastMonthStart)),
+            where("date", "<", Timestamp.fromDate(thisMonthStart)),
+            orderBy("date")
+          );
+
+          const prevSnap = await getDocs(prevQuery);
+          let lastMonthUsed = 0;
+          prevSnap.forEach((doc) => {
+            const d = doc.data();
+            if (d.type === "used") {
+              lastMonthUsed += Math.abs(Number(d.amount || 0));
+            }
+          });
+
+          const unusedCredits = user.credits;
+          console.log("unusedcredits", unusedCredits);
+          console.log("userMonthlycredits", userMonthlyCredits);
+          console.log("user.credits", user.credits);
+          console.log("sharedcarryover", sharedCarryover);
+          const newCarryover = unusedCredits;
+
+          console.log("🔢 Last Month Used:", lastMonthUsed);
+          console.log("🆕 New Carryover:", newCarryover);
+
+          if (
+            dateUpdated &&
+            dateUpdated.getMonth() !== now.getMonth()
+            // &&
+            // dateUpdated.getFullYear() !== now.getFullYear()
+          ) {
+            await updateDoc(sharedCreditDocRef, {
+              carryover: newCarryover,
+              dateUpdated: Timestamp.fromDate(
+                new Date(currentYear, currentMonth, 1) // 👈 set to *first day of this month*
+              ),
+            });
+          }
+          setCarryover(newCarryover);
+        } else {
+          console.log("✅ Carryover already updated this month.");
+          setCarryover(sharedCarryover);
+        }
       }
 
       // --- Approved Credits Bought ---
@@ -120,6 +174,14 @@ export const CreditBalance = () => {
     fetchCreditDetails();
   }, [user]);
 
+  useEffect(() => {
+    if (!loading) {
+      const totalAvailable = monthlyCredits + carryover + approvedCredits;
+      const remaining = Math.max(0, totalAvailable - usedCredits);
+      onCreditsUpdate(remaining); // 💡 Notify parent
+    }
+  }, [monthlyCredits, carryover, approvedCredits, usedCredits, loading]);
+
   if (loading) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -129,7 +191,12 @@ export const CreditBalance = () => {
   }
 
   const totalAvailable = monthlyCredits + carryover + approvedCredits;
-  const creditsRemaining = Math.max(0, totalAvailable - usedCredits);
+  creditsRemaining =
+    totalAvailable > usedCredits
+      ? Math.max(0, totalAvailable - usedCredits)
+      : totalAvailable < usedCredits
+      ? 110 - totalAvailable
+      : totalAvailable - 110;
   const usagePercentage =
     totalAvailable === 0 ? 0 : (usedCredits / totalAvailable) * 100;
 

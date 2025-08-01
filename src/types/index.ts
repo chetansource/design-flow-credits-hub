@@ -4,6 +4,7 @@ export interface User {
   displayName: string;
   role: "client" | "designer";
   photoURL?: string;
+  credits?: number; // Optional, can be used for clients
 }
 
 export interface Client extends User {

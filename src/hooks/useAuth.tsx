@@ -114,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: firebaseUser.email || "",
             displayName: firebaseUser.displayName || "Anonymous",
             role: userData.role,
+            credits: userData.credits || 0,
           };
           setUser(authUser);
         } else {

@@ -34,6 +34,7 @@ export const RequestedCredits = () => {
 
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [totalClients, setTotalClients] = useState(0);
 
   useEffect(() => {
     const fetchCredits = async () => {
@@ -47,22 +48,39 @@ export const RequestedCredits = () => {
         .filter((c) => c.status === "requested");
 
       setCreditRequests(all);
+
+      // 👇 Fetch client count here
+      const clientsSnap = await getDocs(collection(db, "users"));
+      const clientDocs = clientsSnap.docs.filter(
+        (doc) => doc.data().role === "client"
+      );
+      setTotalClients(clientDocs.length);
     };
 
     fetchCredits();
   }, []);
 
-  const approveCredits = async (path: string) => {
-    const creditToApprove = creditRequests.find((c) => c.path === path);
+  const approveCredits = async (clickedPath: string) => {
+    const creditToApprove = creditRequests.find((c) => c.path === clickedPath);
     if (!creditToApprove) return;
 
     const { buyedcredits, username } = creditToApprove;
 
     try {
-      // 1. Update the credit request document to approved
-      await updateDoc(doc(db, path), { status: "approved" });
+      // ✅ Step 1: Get all requests with same username and status "requested"
+      const snapshot = await getDocs(collectionGroup(db, "creditsbuyed"));
+      const matchingRequests = snapshot.docs.filter((docSnap) => {
+        const data = docSnap.data();
+        return data.username === username && data.status === "requested";
+      });
 
-      // 2. Fetch all clients
+      // ✅ Step 2: Mark all matched credit requests as approved
+      const approveAll = matchingRequests.map((docSnap) =>
+        updateDoc(docSnap.ref, { status: "approved" })
+      );
+      await Promise.all(approveAll);
+
+      // ✅ Step 3: Fetch all clients
       const clientsSnap = await getDocs(collection(db, "users"));
       const clientDocs = clientsSnap.docs.filter(
         (doc) => doc.data().role === "client"
@@ -70,39 +88,16 @@ export const RequestedCredits = () => {
 
       if (clientDocs.length === 0) return;
 
-      // 3. For each client, update credits
-      // const updatePromises = clientDocs.map((clientDoc) => {
-      //   const data = clientDoc.data();
-      //   const newCredits = (data.credits || 0) + buyedcredits;
-
-      //   return updateDoc(doc(db, "users", clientDoc.id), {
-      //     credits: newCredits,
-      //   });
-      // });
-      // 4. Optionally: Add to creditHistory for all clients
-      // const creditHistoryPromises = clientDocs.map((clientDoc) =>
-      //   addDoc(collection(db, "users", clientDoc.id, "creditHistory"), {
-      //     type: "bought",
-      //     amount: buyedcredits,
-      //     description: `Admin approved credits requested by ${username}`,
-      //     date: new Date(),
-      //     balance: (clientDoc.data().credits || 0) + buyedcredits,
-      //   })
-      // );
-      // await Promise.all([...updatePromises, ...creditHistoryPromises]);
-
-      // 3. For each client, update credits and add credit history
+      // ✅ Step 4: For each client, update credits and log in history
       const updateAndLogPromises = clientDocs.map(async (clientDoc) => {
         const userRef = doc(db, "users", clientDoc.id);
         const currentCredits = clientDoc.data().credits || 0;
         const updatedCredits = currentCredits + buyedcredits;
 
-        // ✅ Update user's credits
         await updateDoc(userRef, {
           credits: updatedCredits,
         });
 
-        // ✅ Add to user's credit history
         await addDoc(collection(db, "users", clientDoc.id, "creditsbuyed"), {
           type: "bought",
           amount: buyedcredits,
@@ -114,13 +109,27 @@ export const RequestedCredits = () => {
 
       await Promise.all(updateAndLogPromises);
 
-      // 5. Clean up UI state
-      setCreditRequests((prev) => prev.filter((c) => c.path !== path));
+      // ✅ Step 5: Remove all approved requests from UI
+      setCreditRequests((prev) =>
+        prev.filter((c) => c.username !== username || c.status !== "requested")
+      );
+
       navigate("/designer");
     } catch (err) {
       console.error("Error approving credits:", err);
     }
   };
+
+  const groupedRequests = Object.values(
+    creditRequests.reduce((acc, req) => {
+      if (!acc[req.username]) {
+        acc[req.username] = { ...req, total: req.buyedcredits };
+      } else {
+        acc[req.username].total += req.buyedcredits;
+      }
+      return acc;
+    }, {} as Record<string, CreditRequest & { total: number }>)
+  );
 
   if (creditRequests.length === 0)
     return <p>There is no credits to approve :)</p>;
@@ -134,15 +143,17 @@ export const RequestedCredits = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {creditRequests.map((req) => (
+        {groupedRequests.map((req) => (
           <div
-            key={req.id}
+            key={req.username}
             className="border p-4 rounded-md shadow-sm flex items-center justify-between"
           >
             <div>
               <p className="font-semibold">{req.username}</p>
               <p className="text-sm text-gray-600">
-                Requested {req.buyedcredits} credits
+                Requested {req.total} credits —{" "}
+                {totalClients > 0 ? Math.floor(req.total / totalClients) : 0}{" "}
+                per client
               </p>
             </div>
             <Button onClick={() => approveCredits(req.path)}>Approve</Button>
